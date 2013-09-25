@@ -48,6 +48,12 @@
     <Reference Include="MyEMSLReader">
       <HintPath>Lib\MyEMSLReader.dll</HintPath>
     </Reference>
+    <Reference Include="Pacifica.Core">
+      <HintPath>Lib\Pacifica.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="PRISM">
+      <HintPath>Lib\PRISM.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />

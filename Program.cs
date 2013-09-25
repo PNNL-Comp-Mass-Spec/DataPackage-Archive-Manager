@@ -18,7 +18,7 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "September 24, 2013";
+		public const string PROGRAM_DATE = "September 25, 2013";
 
 		protected static string mDBConnectionString;
 		protected static string mDataPkgIDList;
@@ -59,7 +59,7 @@ namespace DataPackage_Archive_Manager
 					// Attach the events
 					archiver.ErrorEvent	+=new MessageEventHandler(archiver_ErrorEvent);
 					archiver.MessageEvent+=new MessageEventHandler(archiver_MessageEvent);
-
+				
 					List<int> lstDataPkgIDs;
 					if (mDataPkgIDList.StartsWith("*"))
 						// Process all Data Packages
@@ -78,7 +78,8 @@ namespace DataPackage_Archive_Manager
 						}
 					}
 
-					success = archiver.ProcessDataPackages(lstDataPkgIDs);
+					// Upload new data, then verify previously updated data
+					success = archiver.StartProcessing(lstDataPkgIDs, mPreviewMode);
 
 					if (!success)
 					{
