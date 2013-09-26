@@ -140,7 +140,7 @@ namespace DataPackage_Archive_Manager
 				if (fiLocalFile.Directory.FullName.Length > diDataPkg.FullName.Length)
 				{
 					// Append the subdirectory path
-					subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length));
+					subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length+1)).Replace(@"\", "/");
 				}
 
 				// Look for this file in MyEMSL
