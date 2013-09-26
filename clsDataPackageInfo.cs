@@ -7,7 +7,7 @@ namespace DataPackage_Archive_Manager
 {
 	class clsDataPackageInfo
 	{
-		public int ID { get; private set; }
+		public int ID { get; private set; }			// Data Package ID
 		public string Name { get; set; }
 		public DateTime Created { get; set; }
 		public string FolderName { get; set; }		// Example: 894_CPTAC_Batch4_Global_CompRef

@@ -21,6 +21,8 @@ namespace DataPackage_Archive_Manager
 		public const string PROGRAM_DATE = "September 25, 2013";
 
 		protected static string mDBConnectionString;
+		protected static clsLogTools.LogLevels mLogLevel;
+
 		protected static string mDataPkgIDList;
 		protected static bool mPreviewMode;
 
@@ -30,6 +32,8 @@ namespace DataPackage_Archive_Manager
 			bool success = false;
 
 			mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
+			mLogLevel = clsLogTools.LogLevels.INFO;
+
 			mDataPkgIDList = string.Empty;
 			mPreviewMode = false;
 
@@ -54,7 +58,7 @@ namespace DataPackage_Archive_Manager
 				}
 				else
 				{
-					clsDataPackageArchiver archiver = new clsDataPackageArchiver(mDBConnectionString);
+					clsDataPackageArchiver archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
 
 					// Attach the events
 					archiver.ErrorEvent	+=new MessageEventHandler(archiver_ErrorEvent);
@@ -108,7 +112,7 @@ namespace DataPackage_Archive_Manager
 			// Returns True if no problems; otherwise, returns false
 
 			string strValue = string.Empty;
-			List<string> lstValidParameters = new List<string> { "Preview", "DB" };
+			List<string> lstValidParameters = new List<string> { "Preview", "DB", "Debug" };
 
 			try
 			{
@@ -139,6 +143,12 @@ namespace DataPackage_Archive_Manager
 							mPreviewMode = true;
 						}
 
+						if (objParseCommandLine.IsParameterPresent("Debug"))
+						{
+							mLogLevel = clsLogTools.LogLevels.DEBUG;
+
+						}						
+
 						if (objParseCommandLine.RetrieveValueForParameter("DB", out strValue))
 						{
 							if (string.IsNullOrWhiteSpace(strValue))
@@ -146,7 +156,7 @@ namespace DataPackage_Archive_Manager
 							else
 								mDBConnectionString = strValue;								
 						}
-
+						
 					}
 
 					return true;
@@ -208,7 +218,7 @@ namespace DataPackage_Archive_Manager
 				Console.WriteLine();
 				Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
-				Console.WriteLine(" DataPackageIDList [/Preview] [/DB:ConnectionString]");
+				Console.WriteLine(" DataPackageIDList [/Preview] [/DB:ConnectionString] [/Debug]");
 
 				Console.WriteLine();
 				Console.WriteLine("DataPackageIDList can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages");
@@ -217,6 +227,8 @@ namespace DataPackage_Archive_Manager
 				Console.WriteLine("Note that when uploading files this program must be run as user pnl\\svc-dms");
 				Console.WriteLine("");
 				Console.WriteLine("Use /DB to override the default connection string of " + clsDataPackageArchiver.CONNECTION_STRING);
+				Console.WriteLine();
+				Console.WriteLine("Use /Debug to enable the display (and logging) of debug messages");
 				Console.WriteLine();
 				Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013");
 				Console.WriteLine("Version: " + GetAppVersion());

@@ -14,6 +14,7 @@ namespace DataPackage_Archive_Manager
 		#region "Constants"
 		
 		public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;";
+
 		protected const string SP_NAME_STORE_MYEMSL_STATS = "StoreMyEMSLUploadStats";
 		protected const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "SetMyEMSLUploadStatus";
 
@@ -26,6 +27,9 @@ namespace DataPackage_Archive_Manager
 			public int DataPackageID;
 			public DateTime Entered;
 			public string StatusURI;
+
+			public string SharePath;
+			public string LocalPath;
 		}
 
 		protected struct udtMyEMSLUploadInfo
@@ -37,12 +41,27 @@ namespace DataPackage_Archive_Manager
 			public double UploadTimeSeconds;
 			public string StatusURI;
 			public int ErrorCode;
+
+			public void Clear()
+			{
+				SubDir = string.Empty;
+				FileCountNew = 0;
+				FileCountUpdated = 0;
+				Bytes = 0;
+				UploadTimeSeconds = 0;
+				StatusURI = string.Empty;
+				ErrorCode = 0;
+			}
 		}
 
 		#endregion
 
 		#region "Class variables"
+		
 		protected PRISM.DataBase.clsExecuteDatabaseSP m_ExecuteSP;
+		protected Upload mMyEMSLUploader;
+		protected DateTime mLastStatusUpdate;
+
 		#endregion
 
 		#region "Auto properties"
@@ -65,7 +84,7 @@ namespace DataPackage_Archive_Manager
 		/// WARN = 3,
 		/// ERROR = 2,
 		/// FATAL = 1</remarks>
-		public int LogLevel
+		public clsLogTools.LogLevels LogLevel
 		{ get; set; }
 
 		#endregion
@@ -73,10 +92,10 @@ namespace DataPackage_Archive_Manager
 		/// <summary>
 		/// Constructor
 		/// </summary>
-		public clsDataPackageArchiver(string connectionString)
+		public clsDataPackageArchiver(string connectionString, clsLogTools.LogLevels logLevel)
 		{
 			this.DBConnectionString = connectionString;
-			this.ErrorMessage = string.Empty;
+			this.LogLevel = logLevel;
 
 			Initialize();
 		}
@@ -87,6 +106,99 @@ namespace DataPackage_Archive_Manager
 				return 1;
 			else
 				return 0;
+		}
+
+		protected List<FileInfoObject> FindDataPackageFilesToArchive(
+			clsDataPackageInfo dataPkgInfo, 
+			DirectoryInfo diDataPkg, 
+			MyEMSLReader.DatasetPackageListInfo dataPackageInfoCache,
+			out udtMyEMSLUploadInfo uploadInfo)
+		{
+			var lstDatasetFilesToArchive = new List<FileInfoObject>();
+
+			uploadInfo = new udtMyEMSLUploadInfo();
+			uploadInfo.Clear();
+
+			uploadInfo.SubDir = dataPkgInfo.FolderName;
+
+			// Construct a list of the files on disk for this data package
+			var lstDataPackageFiles = diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList<FileInfo>();
+
+			if (lstDataPackageFiles.Count == 0)
+			{
+				// Nothing to archive; this is not an error
+				ReportMessage("Data package " + dataPkgInfo.ID + " does not have any files; nothing to archive", clsLogTools.LogLevels.INFO);
+				ReportMessage("Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
+				return lstDatasetFilesToArchive;
+			}
+					
+			foreach (var fiLocalFile in lstDataPackageFiles)
+			{
+				// Note: when storing data package files in MyEMSL the SubDir path will always start with the data package folder name
+				string subDir = string.Copy(uploadInfo.SubDir);
+
+				if (fiLocalFile.Directory.FullName.Length > diDataPkg.FullName.Length)
+				{
+					// Append the subdirectory path
+					subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length));
+				}
+
+				// Look for this file in MyEMSL
+				var archiveFiles = dataPackageInfoCache.FindFiles(fiLocalFile.Name, subDir, dataPkgInfo.ID);
+
+				if (archiveFiles.Count == 0)
+				{
+					lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
+					uploadInfo.FileCountNew++;
+					uploadInfo.Bytes += fiLocalFile.Length;
+				}
+				else
+				{
+					var archiveFile = archiveFiles.First();
+
+					// Compare file size
+					if (fiLocalFile.Length != archiveFile.FileInfo.FileSizeBytes)
+					{
+						lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
+						uploadInfo.FileCountUpdated++;
+						uploadInfo.Bytes += fiLocalFile.Length;
+					}
+					else
+					{
+						// Compare Sha-1 hash
+						string sha1HashHex = Utilities.GenerateSha1Hash(fiLocalFile.FullName);
+
+						if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
+						{
+							lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName, sha1HashHex));
+							uploadInfo.FileCountUpdated++;
+							uploadInfo.Bytes += fiLocalFile.Length;
+						}
+					}
+					
+				}
+			}
+
+			if (lstDatasetFilesToArchive.Count == 0)
+			{
+				// Nothing to archive; this is not an error
+				ReportMessage("All files for data package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, clsLogTools.LogLevels.INFO);
+				ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
+				return lstDatasetFilesToArchive;
+			}
+		
+			return lstDatasetFilesToArchive;
+		}
+
+		protected DateTime GetDBDate(SqlDataReader reader, string columnName)
+		{
+			object value = reader[columnName];
+
+			if (Convert.IsDBNull(value))
+				return DateTime.Now;
+			else
+				return (DateTime)value;
+
 		}
 
 		protected string GetDBString(SqlDataReader reader, string columnName)
@@ -107,7 +219,9 @@ namespace DataPackage_Archive_Manager
 			try
 			{
 
-				string sql = "SELECT Entry_ID, Data_Package_ID, Entered, StatusNum, Status_URI FROM V_MyEMSL_Uploads WHERE ErrorCode = 0 And (Available = 0 Or Verified = 0) AND ISNULL(StatusNum, 0) > 0";
+				string sql = " SELECT MU.Entry_ID, MU.Data_Package_ID, MU.Entered, MU.StatusNum, MU.Status_URI, DP.Local_Path, DP.Share_Path " +
+							 " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.Data_Package_ID = DP.ID" +
+							 " WHERE MU.ErrorCode = 0 And (MU.Available = 0 Or MU.Verified = 0) AND ISNULL(MU.StatusNum, 0) > 0";
 
 				while (retryCount > 0)
 				{
@@ -136,6 +250,10 @@ namespace DataPackage_Archive_Manager
 									if (!string.IsNullOrEmpty(value))
 									{
 										statusInfo.StatusURI = value;
+
+										statusInfo.SharePath = GetDBString(reader, "Share_Path");
+										statusInfo.LocalPath = GetDBString(reader, "Local_Path");
+
 										dctURIs.Add(statusNum, statusInfo);
 									}
 								}
@@ -166,9 +284,12 @@ namespace DataPackage_Archive_Manager
 
 		protected void Initialize()
 		{
+			this.ErrorMessage = string.Empty;
+			this.mLastStatusUpdate = DateTime.UtcNow;
+
 			// Set up the loggers
-			string logFileName = "DataPkgArchiver";
-			this.LogLevel = 4;
+			string logFileName = @"Logs\DataPkgArchiver";
+			
 			clsLogTools.CreateFileLogger(logFileName, this.LogLevel);
 
 			clsLogTools.CreateDbLogger(this.DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
@@ -180,8 +301,17 @@ namespace DataPackage_Archive_Manager
 			m_ExecuteSP = new PRISM.DataBase.clsExecuteDatabaseSP(this.DBConnectionString);
 			m_ExecuteSP.DBErrorEvent += new PRISM.DataBase.clsExecuteDatabaseSP.DBErrorEventEventHandler(m_ExecuteSP_DBErrorEvent);
 
-		}
+			mMyEMSLUploader = new Upload();
 
+			// Attach the events			
+			mMyEMSLUploader.DebugEvent += new Pacifica.Core.MessageEventHandler(myEMSLUpload_DebugEvent);
+			mMyEMSLUploader.ErrorEvent += new Pacifica.Core.MessageEventHandler(myEMSLUpload_ErrorEvent);
+			
+			mMyEMSLUploader.StatusUpdate += new Pacifica.Core.StatusUpdateEventHandler(myEMSLUpload_StatusUpdate);
+			mMyEMSLUploader.UploadCompleted += new UploadCompletedEventHandler(myEMSLUpload_UploadCompleted);
+
+
+		}
 
 		protected List<clsDataPackageInfo> LookupDataPkgInfo(List<int> lstDataPkgIDs)
 		{
@@ -195,7 +325,7 @@ namespace DataPackage_Archive_Manager
 					cnDB.Open();
 
 					string sql = " SELECT ID, Name, Created, Package_File_Folder, Share_Path, Local_Path " +
-								 " FROM S_V_Data_Package_Export";
+								 " FROM V_Data_Package_Export";
 
 					if (lstDataPkgIDs.Count > 0)
 						sql += " WHERE ID IN (" + string.Join(",", lstDataPkgIDs) + ")";
@@ -211,15 +341,9 @@ namespace DataPackage_Archive_Manager
 
 						var dataPkgInfo = new clsDataPackageInfo(dataPkgID);
 
-
 						dataPkgInfo.Name = GetDBString(reader, "Name");
 
-						string pkgCreatedText = GetDBString(reader, "Created");
-						DateTime pkgCreated;
-						if (System.DateTime.TryParse(pkgCreatedText, out pkgCreated))
-						{
-							dataPkgInfo.Created = pkgCreated;
-						}
+						dataPkgInfo.Created = GetDBDate(reader, "Created");
 
 						dataPkgInfo.FolderName = GetDBString(reader, "Package_File_Folder");
 						dataPkgInfo.SharePath = GetDBString(reader, "Share_Path");
@@ -234,7 +358,7 @@ namespace DataPackage_Archive_Manager
 			}
 			catch (Exception ex)
 			{
-				ReportError("Error in LookupDataPkgInfo: " + ex.Message);
+				ReportError("Error in LookupDataPkgInfo: " + ex.Message, true);
 				return new List<clsDataPackageInfo>();
 			}
 
@@ -247,8 +371,11 @@ namespace DataPackage_Archive_Manager
 			{
 				// The current user is not svc-dms
 				// Uploaded files would be associated with the wrong username and thus would not be visible to all DMS Users
-				this.PreviewMode = true;
-				ReportMessage(@"Current user is not pnl\svc-dms; auto-enabling PreviewMode");
+				if (!this.PreviewMode)
+				{
+					this.PreviewMode = true;
+					ReportMessage(@"Current user is not pnl\svc-dms; auto-enabling PreviewMode");
+				}
 			}
 
 			List<string> lstValues = dataPkgIDList.Split(',').ToList();
@@ -352,7 +479,7 @@ namespace DataPackage_Archive_Manager
 			}
 			catch (Exception ex)
 			{
-				ReportError("Error in ProcessDataPackages: " + ex.Message);
+				ReportError("Error in ProcessDataPackages: " + ex.Message, true);
 				return false;
 			}
 
@@ -360,6 +487,9 @@ namespace DataPackage_Archive_Manager
 				return true;
 			else
 			{
+				if (this.PreviewMode)
+					return true;
+
 				if (dataPackagesToProcess == 1)
 					ReportError("Failed to archive data package " + lstDataPkgIDs.First());
 				else if (successCount == 0)
@@ -388,6 +518,11 @@ namespace DataPackage_Archive_Manager
 		protected bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, MyEMSLReader.DatasetPackageListInfo dataPackageInfoCache)
 		{
 			bool success = false;
+			udtMyEMSLUploadInfo uploadInfo = new udtMyEMSLUploadInfo();
+			uploadInfo.Clear();
+
+			DateTime dtStartTime = System.DateTime.UtcNow;
+
 			try
 			{
 				var diDataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
@@ -400,28 +535,94 @@ namespace DataPackage_Archive_Manager
 					return false;
 				}
 
-				// Construct a list of the files on disk for this data package
-				var fileList = diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList<FileInfo>();
-
-				if (fileList.Count == 0)
+				// Look for an existing metadata file
+				string metadataFilePath = Path.Combine(diDataPkg.Parent.FullName, Utilities.GetMetadataFilenameForJob(dataPkgInfo.ID.ToString()));
+				var fiMetadataFile = new FileInfo(metadataFilePath);
+				if (fiMetadataFile.Exists)
 				{
-					// Nothing to archive; this is not an error
-					ReportMessage("Data package folder is empty; nothing to archive: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
+					if (DateTime.UtcNow.Subtract(fiMetadataFile.LastWriteTimeUtc).TotalHours > 48)
+					{
+						ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file over 48 hours old; deleting file: " + fiMetadataFile.FullName, true);
+						fiMetadataFile.Delete();
+					}
+					else
+					{
+						ReportMessage("Data Package " + dataPkgInfo.ID + " has an existing metadata file less than 48 hours old; skipping this data package", clsLogTools.LogLevels.WARN);
+						ReportMessage("  " + fiMetadataFile.FullName, clsLogTools.LogLevels.DEBUG);
+
+						// This is not a fatal error; return true
+						return true;
+					}
+				}
+
+				// Compare the files to those already in MyEMSL to create a list of files to be uploaded
+				List<FileInfoObject> lstUnmatchedFiles = FindDataPackageFilesToArchive(dataPkgInfo, diDataPkg, dataPackageInfoCache, out uploadInfo);
+
+				if (lstUnmatchedFiles.Count == 0)
+				{
+					// Nothing to do
 					return true;
 				}
 
-				// Look for files tracked in MyEMSL for this data package
-				dataPackageInfoCache
-
 				if (this.PreviewMode)
 				{
-					// Preview the changes
+					if (lstUnmatchedFiles.Count == 0)
+					{
+						ReportMessage("All files for Data Package " + dataPkgInfo.ID + " are already up-to-date in the archive");
+					}
+					else
+					{
+						ReportMessage("Need to upload " + lstUnmatchedFiles.Count + " file(s) for Data Package " + dataPkgInfo.ID);
+
+						// Preview the changes
+						foreach (var unmatchedFile in lstUnmatchedFiles)
+						{
+							Console.WriteLine("  " + unmatchedFile.RelativeDestinationFullPath);
+						}
+					}
+
 				}
 				else
 				{
 					// Upload the files
 
-					udtMyEMSLUploadInfo uploadInfo = StartUpload(dataPkgInfo, filesToUpload);
+					Upload.udtUploadMetadata uploadMetadata = new Upload.udtUploadMetadata();
+					uploadMetadata.Clear();
+
+					uploadMetadata.DataPackageID = dataPkgInfo.ID;
+					uploadMetadata.SubFolder = uploadInfo.SubDir;
+
+					// Instantiate the metadata object
+					Dictionary<string, object> metadataObject = Upload.CreateMetadataObject(uploadMetadata, lstUnmatchedFiles);
+					string statusURL;
+
+					mMyEMSLUploader.TransferFolderPath = diDataPkg.Parent.FullName;
+					mMyEMSLUploader.JobNumber = dataPkgInfo.ID.ToString();
+
+					success = mMyEMSLUploader.StartUpload(metadataObject, out statusURL);
+
+					var tsElapsedTime = System.DateTime.UtcNow.Subtract(dtStartTime);
+
+					uploadInfo.UploadTimeSeconds = tsElapsedTime.TotalSeconds;
+					uploadInfo.StatusURI = statusURL;					
+
+					if (success)
+					{
+
+						string msg = "Upload of changed files for Data Package " + dataPkgInfo.ID + " completed in " + tsElapsedTime.TotalSeconds.ToString("0.0") + " seconds: " + uploadInfo.FileCountNew + " new files, " + uploadInfo.FileCountUpdated + " updated files, " + uploadInfo.Bytes + " bytes";
+						ReportMessage(msg);
+
+						msg = "  myEMSL statusURI => " + uploadInfo.StatusURI;
+						ReportMessage(msg, clsLogTools.LogLevels.DEBUG);
+					}
+					else
+					{
+						ReportError("Upload of changed files for Data Package " + dataPkgInfo.ID + " failed: " + mMyEMSLUploader.ErrorMessage, true);
+
+						uploadInfo.ErrorCode = mMyEMSLUploader.ErrorMessage.GetHashCode();
+						if (uploadInfo.ErrorCode == 0)
+							uploadInfo.ErrorCode = 1;
+					}					
 
 					// Post the StatusURI info to the database
 					StoreMyEMSLUploadStats(dataPkgInfo, uploadInfo);
@@ -431,10 +632,18 @@ namespace DataPackage_Archive_Manager
 			}
 			catch (Exception ex)
 			{
-				ReportError("Error in ProcessOneDataPackage: " + ex.Message);
+				ReportError("Error in ProcessOneDataPackage processing Data Package " + dataPkgInfo.ID + ": " + ex.Message, true);
+
+				uploadInfo.ErrorCode = ex.Message.GetHashCode();
+				if (uploadInfo.ErrorCode == 0)
+					uploadInfo.ErrorCode = 1;
+
+				uploadInfo.UploadTimeSeconds = System.DateTime.UtcNow.Subtract(dtStartTime).TotalSeconds;
+
+				StoreMyEMSLUploadStats(dataPkgInfo, uploadInfo);
+
 				return false;
 			}
-
 
 		}
 
@@ -540,7 +749,9 @@ namespace DataPackage_Archive_Manager
 					cmd.Parameters["@ErrorCode"].Direction = System.Data.ParameterDirection.Input;
 					cmd.Parameters["@ErrorCode"].Value = uploadInfo.ErrorCode;
 				}
-				
+
+				ReportMessage("Calling " + SP_NAME_STORE_MYEMSL_STATS + " for Data Package " + dataPkgInfo.ID, clsLogTools.LogLevels.DEBUG);
+
 				//Execute the SP (retry the call up to 4 times)
 				m_ExecuteSP.TimeoutSeconds = 20;
 				var resCode = m_ExecuteSP.ExecuteSP(cmd, 4);
@@ -604,6 +815,10 @@ namespace DataPackage_Archive_Manager
 					Console.WriteLine("Simulate call to " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Entry_ID=" + statusInfo.EntryID + ", DataPackageID=" + statusInfo.DataPackageID + " Entry_ID=" + statusInfo.EntryID);
 					return true;
 				}
+				else
+				{
+					ReportMessage("Calling " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Data Package " + statusInfo.DataPackageID, clsLogTools.LogLevels.DEBUG);
+				}
 
 				m_ExecuteSP.TimeoutSeconds = 20;
 				var resCode = m_ExecuteSP.ExecuteSP(cmd, 2);
@@ -639,6 +854,12 @@ namespace DataPackage_Archive_Manager
 			int retryCount = 2;
 			var dctURIs = GetStatusURIs(retryCount);
 
+			if (dctURIs.Count == 0)
+			{
+				// Nothing to do
+				return true;
+			}
+
 			// Call the testauth service to obtain a cookie for this session
 			string authURL = Configuration.TestAuthUri;
 			Auth auth = new Auth(new Uri(authURL));
@@ -652,6 +873,16 @@ namespace DataPackage_Archive_Manager
 			}
 
 			int exceptionCount = 0;
+
+			// Confirm that the data package is visible in Elastic Search
+			var dataPackageInfoCache = new MyEMSLReader.DatasetPackageListInfo();
+			foreach (var statusInfo in dctURIs)
+			{
+				dataPackageInfoCache.AddDataPackage(statusInfo.Value.DataPackageID);
+			}
+
+			// Prepopulate lstDataPackageInfoCache with the files for the current group
+			dataPackageInfoCache.RefreshInfo();
 
 			var statusChecker = new MyEMSLStatusCheck();
 
@@ -675,6 +906,19 @@ namespace DataPackage_Archive_Manager
 						return false;
 					}
 
+					if (available)
+					{
+						var archiveFiles = dataPackageInfoCache.FindFiles("*", "", statusInfo.Value.DataPackageID);
+
+						if (archiveFiles.Count > 0)
+							ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is available in MyEMSL Elastic Search", clsLogTools.LogLevels.DEBUG);
+						else
+						{
+							ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is not yet available in MyEMSL Elastic Search", clsLogTools.LogLevels.DEBUG);
+							available = false;
+						}
+					}
+					
 					if (!available && System.DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 24)
 					{
 						ReportError("Data package " + statusInfo.Value.DataPackageID + " is not available in MyEMSL after 24 hours; see " + statusInfo.Value.StatusURI, true);
@@ -684,6 +928,9 @@ namespace DataPackage_Archive_Manager
 					{
 						// Next check step 6 (Archived and Sha-1 hash values checked)
 						verified = statusChecker.IngestStepCompleted(statusInfo.Value.StatusURI, MyEMSLStatusCheck.StatusStep.Archived, cookieJar, out accessDenied, out statusMessage);
+
+						if (verified)
+							ReportMessage("Data package " + statusInfo.Value.DataPackageID + " has been verified against expected hash values", clsLogTools.LogLevels.DEBUG);
 					}
 
 					if (!verified && System.DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 48)
@@ -695,7 +942,36 @@ namespace DataPackage_Archive_Manager
 					{
 						// Update values in the DB
 						UpdateMyEMSLUploadStatus(statusInfo.Value, available, verified);
-					}
+
+						if (available && verified)
+						{
+							var diDataPkg = new DirectoryInfo(statusInfo.Value.LocalPath);
+							if (!diDataPkg.Exists)
+								diDataPkg = new DirectoryInfo(statusInfo.Value.SharePath);
+
+							if (diDataPkg.Exists)
+							{
+								string metadataFilePath = Path.Combine(diDataPkg.Parent.FullName, Utilities.GetMetadataFilenameForJob(statusInfo.Value.DataPackageID.ToString()));
+								var fiMetadataFile = new FileInfo(metadataFilePath);
+
+								if (fiMetadataFile.Exists)
+								{
+									string msg = "Deleting metadata file since Data Package " + statusInfo.Value.DataPackageID + " is now available and verified: " + fiMetadataFile.FullName;
+
+									if (this.PreviewMode)
+									{
+										ReportMessage("SIMULATE: " + msg);
+									}
+									else
+									{
+										ReportMessage(msg);
+										fiMetadataFile.Delete();
+									}
+								}
+							}
+							
+						}
+					}					
 
 				}
 				catch (Exception ex)
@@ -733,6 +1009,47 @@ namespace DataPackage_Archive_Manager
 
 		#region "Event Handlers"
 
+
+		private void m_ExecuteSP_DBErrorEvent(string Message)
+		{
+			ReportError("Stored procedure execution error: " + Message, true);
+		}
+
+
+		void myEMSLUpload_DebugEvent(object sender, Pacifica.Core.MessageEventArgs e)
+		{
+			ReportMessage(e.Message, clsLogTools.LogLevels.DEBUG);
+		}
+
+		void myEMSLUpload_ErrorEvent(object sender, Pacifica.Core.MessageEventArgs e)
+		{
+			ReportError(e.Message, true);
+		}
+
+		void myEMSLUpload_StatusUpdate(object sender, Pacifica.Core.StatusEventArgs e)
+		{
+			if (DateTime.UtcNow.Subtract(mLastStatusUpdate).TotalSeconds >= 5)
+			{
+				mLastStatusUpdate = DateTime.UtcNow;
+				ReportMessage(e.StatusMessage, clsLogTools.LogLevels.DEBUG);
+			}
+			
+		}
+
+		void myEMSLUpload_UploadCompleted(object sender, Pacifica.Core.UploadCompletedEventArgs e)
+		{
+			string msg = "Upload complete";
+
+			// Note that e.ServerResponse will simply have the StatusURL if the upload succeeded
+			// If a problem occurred, then e.ServerResponse will either have the full server reponse, or may even be blank
+			if (string.IsNullOrEmpty(e.ServerResponse))
+				msg += ": empty server reponse";
+			else
+				msg += ": " + e.ServerResponse;
+	
+			ReportMessage(msg, clsLogTools.LogLevels.INFO);
+		}
+
 		public void OnErrorMessage(MessageEventArgs e)
 		{
 			if (ErrorEvent != null)
@@ -749,11 +1066,6 @@ namespace DataPackage_Archive_Manager
 		{
 			if (ProgressEvent != null)
 				ProgressEvent(this, e);
-		}
-
-		private void m_ExecuteSP_DBErrorEvent(string Message)
-		{
-			ReportError("Stored procedure execution error: " + Message, true);
 		}
 
 		#endregion

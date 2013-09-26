@@ -357,6 +357,16 @@ namespace DataPackage_Archive_Manager
 			}	// End sub
 
 			/// <summary>
+			/// Configures the file logger
+			/// </summary>
+			/// <param name="LogFileName">Base name for log file</param>
+			/// <param name="LogLevel">Debug level for file logger</param>
+			public static void CreateFileLogger(string LogFileName, LogLevels LogLevel)
+			{
+				CreateFileLogger(LogFileName, (int)LogLevel);
+			}
+
+			/// <summary>
 			/// Configures the FTP logger
 			/// </summary>
 			/// <param name="logFileName">Name of FTP log file</param>
