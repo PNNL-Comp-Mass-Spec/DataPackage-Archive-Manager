@@ -18,6 +18,17 @@ namespace DataPackage_Archive_Manager
 		protected const string SP_NAME_STORE_MYEMSL_STATS = "StoreMyEMSLUploadStats";
 		protected const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "SetMyEMSLUploadStatus";
 
+
+		/// <summary>
+		/// Maximum number of files to archive
+		/// </summary>
+		/// <remarks>
+		/// Since data package uploads always work with the entire data package folder and all subfolders,
+		///   this a maximum cap on the number of files that will be stored in MyEMSL for a given data package
+		/// If a data package has more than 500 files, then zip up groups of files before archiving to MyEMSL
+		/// </remarks>
+		protected const int MAX_FILES_TO_ARCHIVE = 500;
+
 		#endregion
 
 		#region "Structures"
@@ -122,16 +133,56 @@ namespace DataPackage_Archive_Manager
 			uploadInfo.SubDir = dataPkgInfo.FolderName;
 
 			// Construct a list of the files on disk for this data package
-			var lstDataPackageFiles = diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList<FileInfo>();
-
-			if (lstDataPackageFiles.Count == 0)
+			var lstDataPackageFilesAll = diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList<FileInfo>();
+			
+			if (lstDataPackageFilesAll.Count == 0)
 			{
 				// Nothing to archive; this is not an error
 				ReportMessage("Data package " + dataPkgInfo.ID + " does not have any files; nothing to archive", clsLogTools.LogLevels.INFO);
 				ReportMessage("Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
-				return lstDatasetFilesToArchive;
+				return new List<FileInfoObject>();
 			}
-					
+
+			// Filter out files that we do not want to archive
+			var lstFilesToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase);
+			lstFilesToSkip.Add("Thumbs.db");
+			lstFilesToSkip.Add(".DS_Store");
+			lstFilesToSkip.Add(".Rproj.user");
+
+			var lstDataPackageFiles = new List<FileInfo>();
+			foreach (var dataPkgFile in lstDataPackageFilesAll)
+			{
+				bool keep = true;
+				if (lstFilesToSkip.Contains(dataPkgFile.Name))
+				{
+					keep = false;
+				}
+				else if (dataPkgFile.Name.StartsWith("~$"))
+				{
+					if ((dataPkgFile.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden)
+						keep = false;
+				}
+				else if (dataPkgFile.Name.StartsWith("SyncToy_") && dataPkgFile.Name.EndsWith(".dat"))
+				{
+					keep = false;
+				}
+				
+				if (keep)
+					lstDataPackageFiles.Add(dataPkgFile);
+
+			}
+
+			if (lstDataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
+			{
+				ReportError("Data package " + dataPkgInfo.ID + " has " + lstDataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count", true);
+				return new List<FileInfoObject>();
+			}
+
+			DateTime dtLastProgress = System.DateTime.UtcNow;
+			DateTime dtLastProgressDetail = System.DateTime.UtcNow;
+
+			int filesProcessed = 0;
+
 			foreach (var fiLocalFile in lstDataPackageFiles)
 			{
 				// Note: when storing data package files in MyEMSL the SubDir path will always start with the data package folder name
@@ -140,7 +191,7 @@ namespace DataPackage_Archive_Manager
 				if (fiLocalFile.Directory.FullName.Length > diDataPkg.FullName.Length)
 				{
 					// Append the subdirectory path
-					subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length+1)).Replace(@"\", "/");
+					subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length+1));
 				}
 
 				// Look for this file in MyEMSL
@@ -176,6 +227,23 @@ namespace DataPackage_Archive_Manager
 						}
 					}
 					
+				}
+
+				filesProcessed++;
+				if (DateTime.UtcNow.Subtract(dtLastProgressDetail).TotalSeconds >= 5)
+				{
+					dtLastProgressDetail = DateTime.UtcNow;
+
+					string progressMessage = "Finding files to archive for data package " + dataPkgInfo.ID + ": " + filesProcessed + " / " + lstDataPackageFiles.Count;
+					if (DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 30)
+					{
+						dtLastProgress = DateTime.UtcNow;
+						ReportMessage(progressMessage, clsLogTools.LogLevels.INFO);
+					}
+					else
+					{
+						ReportMessage(progressMessage, clsLogTools.LogLevels.DEBUG);
+					}
 				}
 			}
 
@@ -367,17 +435,6 @@ namespace DataPackage_Archive_Manager
 		public List<int> ParseDataPkgIDList(string dataPkgIDList)
 		{
 
-			if (Environment.UserName.ToLower() != "svc-dms")
-			{
-				// The current user is not svc-dms
-				// Uploaded files would be associated with the wrong username and thus would not be visible to all DMS Users
-				if (!this.PreviewMode)
-				{
-					this.PreviewMode = true;
-					ReportMessage(@"Current user is not pnl\svc-dms; auto-enabling PreviewMode");
-				}
-			}
-
 			List<string> lstValues = dataPkgIDList.Split(',').ToList();
 			List<int> lstDataPkgIDs = new List<int>();
 
@@ -417,6 +474,17 @@ namespace DataPackage_Archive_Manager
 				{
 					ReportError("None of the data packages in lstDataPkgIDs corresponded to a known data package ID");
 					return false;
+				}
+
+				if (Environment.UserName.ToLower() != "svc-dms")
+				{
+					// The current user is not svc-dms
+					// Uploaded files would be associated with the wrong username and thus would not be visible to all DMS Users
+					if (!this.PreviewMode)
+					{
+						this.PreviewMode = true;
+						ReportMessage(@"Current user is not pnl\svc-dms; auto-enabling PreviewMode");
+					}
 				}
 
 				// List of groups of data package IDs
@@ -847,7 +915,6 @@ namespace DataPackage_Archive_Manager
 			// Verify each one, updating the database as appropriate (if PreviewMode=false)
 
 			// Post an error to the DB if data has not been ingested within 24 hours or verified within 48 hours (and PreviewMode=false)
-
 
 			// First obtain a list of status URIs to check
 			// Keys are StatusNum integers, values are StatusURI strings
