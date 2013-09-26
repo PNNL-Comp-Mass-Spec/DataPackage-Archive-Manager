@@ -1085,7 +1085,8 @@ namespace DataPackage_Archive_Manager
 
 		void myEMSLUpload_DebugEvent(object sender, Pacifica.Core.MessageEventArgs e)
 		{
-			ReportMessage(e.Message, clsLogTools.LogLevels.DEBUG);
+			if (!string.IsNullOrWhiteSpace(e.Message))
+				ReportMessage(e.Message, clsLogTools.LogLevels.DEBUG);
 		}
 
 		void myEMSLUpload_ErrorEvent(object sender, Pacifica.Core.MessageEventArgs e)
