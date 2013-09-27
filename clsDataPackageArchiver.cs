@@ -824,7 +824,7 @@ namespace DataPackage_Archive_Manager
 				else
 				{
 					// Upload the files
-					ReportMessage("Uploading " + lstUnmatchedFiles + " new/changed files for Data Package " + dataPkgInfo.ID);
+					ReportMessage("Uploading " + lstUnmatchedFiles.Count + " new/changed files for Data Package " + dataPkgInfo.ID);
 
 					Upload.udtUploadMetadata uploadMetadata = new Upload.udtUploadMetadata();
 					uploadMetadata.Clear();
