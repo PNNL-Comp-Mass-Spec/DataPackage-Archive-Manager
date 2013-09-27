@@ -25,6 +25,7 @@ namespace DataPackage_Archive_Manager
 
 		protected static string mDataPkgIDList;
 		protected static bool mPreviewMode;
+		protected static bool mVerifyOnly;
 
 		public static int Main(string[] args)
 		{
@@ -36,6 +37,7 @@ namespace DataPackage_Archive_Manager
 
 			mDataPkgIDList = string.Empty;
 			mPreviewMode = false;
+			mVerifyOnly = false;
 
 			try
 			{
@@ -63,28 +65,36 @@ namespace DataPackage_Archive_Manager
 					// Attach the events
 					archiver.ErrorEvent	+=new MessageEventHandler(archiver_ErrorEvent);
 					archiver.MessageEvent+=new MessageEventHandler(archiver_MessageEvent);
-				
-					List<int> lstDataPkgIDs;
-					if (mDataPkgIDList.StartsWith("*"))
-						// Process all Data Packages
-						lstDataPkgIDs= new List<int>();
+
+					if (mVerifyOnly)
+					{
+						//Verify previously updated data
+						success = archiver.VerifyUploadStatus();
+					}
 					else
 					{
-						// Parse the data package ID list
-						lstDataPkgIDs = archiver.ParseDataPkgIDList(mDataPkgIDList);
-
-						if (lstDataPkgIDs.Count == 0)
+						List<KeyValuePair<int, int>> lstDataPkgIDs;
+						if (mDataPkgIDList.StartsWith("*"))
+							// Process all Data Packages by passing an empty list to ParseDataPkgIDList
+							lstDataPkgIDs = new List<KeyValuePair<int, int>>();
+						else
 						{
-							// Data Package IDs not defined							
-							ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
-							ShowProgramHelp();
-							return -2;
+							// Parse the data package ID list
+							lstDataPkgIDs = archiver.ParseDataPkgIDList(mDataPkgIDList);
+
+							if (lstDataPkgIDs.Count == 0)
+							{
+								// Data Package IDs not defined							
+								ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
+								ShowProgramHelp();
+								return -2;
+							}
 						}
+
+						// Upload new data, then verify previously updated data
+						success = archiver.StartProcessing(lstDataPkgIDs, mPreviewMode);
 					}
-
-					// Upload new data, then verify previously updated data
-					success = archiver.StartProcessing(lstDataPkgIDs, mPreviewMode);
-
+				
 					if (!success)
 					{
 						ShowErrorMessage("Error archiving the data packages: " + archiver.ErrorMessage);
@@ -112,7 +122,7 @@ namespace DataPackage_Archive_Manager
 			// Returns True if no problems; otherwise, returns false
 
 			string strValue = string.Empty;
-			List<string> lstValidParameters = new List<string> { "Preview", "DB", "Debug" };
+			List<string> lstValidParameters = new List<string> { "Preview", "V", "Debug", "DB"};
 
 			try
 			{
@@ -141,6 +151,11 @@ namespace DataPackage_Archive_Manager
 						if (objParseCommandLine.IsParameterPresent("Preview"))
 						{
 							mPreviewMode = true;
+						}
+
+						if (objParseCommandLine.IsParameterPresent("V"))
+						{
+							mVerifyOnly = true;
 						}
 
 						if (objParseCommandLine.IsParameterPresent("Debug"))
@@ -218,7 +233,7 @@ namespace DataPackage_Archive_Manager
 				Console.WriteLine();
 				Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
-				Console.WriteLine(" DataPackageIDList [/Preview] [/DB:ConnectionString] [/Debug]");
+				Console.WriteLine(" DataPackageIDList [/Preview] [/V] [/DB:ConnectionString] [/Debug]");
 
 				Console.WriteLine();
 				Console.WriteLine("DataPackageIDList can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages");
@@ -226,6 +241,7 @@ namespace DataPackage_Archive_Manager
 				Console.WriteLine("Use /Preview to preview any files that would be uploaded");
 				Console.WriteLine("Note that when uploading files this program must be run as user pnl\\svc-dms");
 				Console.WriteLine("");
+				Console.WriteLine("Use /V to verify recently uploaded data packages and skip looking for new/changed files");
 				Console.WriteLine("Use /DB to override the default connection string of " + clsDataPackageArchiver.CONNECTION_STRING);
 				Console.WriteLine();
 				Console.WriteLine("Use /Debug to enable the display (and logging) of debug messages");

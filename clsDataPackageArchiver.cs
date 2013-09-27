@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Data.SqlClient;
 using Pacifica.Core;
 
@@ -12,7 +13,7 @@ namespace DataPackage_Archive_Manager
 	class clsDataPackageArchiver
 	{
 		#region "Constants"
-		
+
 		public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;";
 
 		protected const string SP_NAME_STORE_MYEMSL_STATS = "StoreMyEMSLUploadStats";
@@ -68,7 +69,7 @@ namespace DataPackage_Archive_Manager
 		#endregion
 
 		#region "Class variables"
-		
+
 		protected PRISM.DataBase.clsExecuteDatabaseSP m_ExecuteSP;
 		protected Upload mMyEMSLUploader;
 		protected DateTime mLastStatusUpdate;
@@ -120,8 +121,8 @@ namespace DataPackage_Archive_Manager
 		}
 
 		protected List<FileInfoObject> FindDataPackageFilesToArchive(
-			clsDataPackageInfo dataPkgInfo, 
-			DirectoryInfo diDataPkg, 
+			clsDataPackageInfo dataPkgInfo,
+			DirectoryInfo diDataPkg,
 			MyEMSLReader.DatasetPackageListInfo dataPackageInfoCache,
 			out udtMyEMSLUploadInfo uploadInfo)
 		{
@@ -133,15 +134,43 @@ namespace DataPackage_Archive_Manager
 			uploadInfo.SubDir = dataPkgInfo.FolderName;
 
 			// Construct a list of the files on disk for this data package
-			var lstDataPackageFilesAll = diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList<FileInfo>();
-			
+			var lstDataPackageFilesAll = diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList();
+
 			if (lstDataPackageFilesAll.Count == 0)
 			{
 				// Nothing to archive; this is not an error
 				ReportMessage("Data package " + dataPkgInfo.ID + " does not have any files; nothing to archive", clsLogTools.LogLevels.INFO);
-				ReportMessage("Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
+				ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
 				return new List<FileInfoObject>();
 			}
+
+			// Look for any Auto-process folders that have recently modified files
+			// These folders will be skipped until the files are at least 60 minutes old
+			// This list contains folder paths to skip
+			var lstDataPackageFoldersToSkip = new List<string>();
+
+			var lstDataPackageFolders = diDataPkg.GetDirectories("*", SearchOption.AllDirectories).ToList();
+			var reAutoJobFolder = new Regex(@"^[A-Z].{1,5}\d{12,12}_Auto\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+			foreach (var dataPkgFolder in lstDataPackageFolders)
+			{
+				if (reAutoJobFolder.IsMatch(dataPkgFolder.Name))
+				{
+					bool skipFolder = false;
+					foreach (var file in dataPkgFolder.GetFiles("*.*", SearchOption.AllDirectories))
+					{
+						if (DateTime.UtcNow.Subtract(file.LastWriteTimeUtc).TotalHours < 1)
+						{
+							skipFolder = true;
+							break;
+						}
+					}
+
+					if (skipFolder)
+						lstDataPackageFoldersToSkip.Add(dataPkgFolder.FullName);
+				}
+			}
+
 
 			// Filter out files that we do not want to archive
 			var lstFilesToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase);
@@ -166,15 +195,39 @@ namespace DataPackage_Archive_Manager
 				{
 					keep = false;
 				}
-				
+
+				foreach (var dataPkgFolder in lstDataPackageFoldersToSkip)
+				{
+					if (dataPkgFile.Directory.FullName.StartsWith(dataPkgFolder))
+					{
+						keep = false;
+						break;
+					}
+				}
+
 				if (keep)
 					lstDataPackageFiles.Add(dataPkgFile);
 
 			}
 
+
 			if (lstDataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
 			{
-				ReportError("Data package " + dataPkgInfo.ID + " has " + lstDataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count", true);
+				ReportError("Data package " + dataPkgInfo.ID + " has " + lstDataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count; see " + dataPkgInfo.SharePath, true);
+				return new List<FileInfoObject>();
+			}
+			else if (lstDataPackageFiles.Count == 0)
+			{
+				// Nothing to archive; this is not an error
+				string msg = "Data package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all have been skipped";
+
+				if (lstDataPackageFoldersToSkip.Count > 0)
+					msg += " due to recently modified files in auto-job result folders";
+				else
+					msg += " since they are system or temporary files";
+
+				ReportMessage(msg + "; nothing to archive", clsLogTools.LogLevels.INFO);
+				ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
 				return new List<FileInfoObject>();
 			}
 
@@ -191,7 +244,7 @@ namespace DataPackage_Archive_Manager
 				if (fiLocalFile.Directory.FullName.Length > diDataPkg.FullName.Length)
 				{
 					// Append the subdirectory path
-					subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length+1));
+					subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length + 1));
 				}
 
 				// Look for this file in MyEMSL
@@ -226,7 +279,7 @@ namespace DataPackage_Archive_Manager
 							uploadInfo.Bytes += fiLocalFile.Length;
 						}
 					}
-					
+
 				}
 
 				filesProcessed++;
@@ -254,7 +307,7 @@ namespace DataPackage_Archive_Manager
 				ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
 				return lstDatasetFilesToArchive;
 			}
-		
+
 			return lstDatasetFilesToArchive;
 		}
 
@@ -357,7 +410,7 @@ namespace DataPackage_Archive_Manager
 
 			// Set up the loggers
 			string logFileName = @"Logs\DataPkgArchiver";
-			
+
 			clsLogTools.CreateFileLogger(logFileName, this.LogLevel);
 
 			clsLogTools.CreateDbLogger(this.DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
@@ -374,14 +427,14 @@ namespace DataPackage_Archive_Manager
 			// Attach the events			
 			mMyEMSLUploader.DebugEvent += new Pacifica.Core.MessageEventHandler(myEMSLUpload_DebugEvent);
 			mMyEMSLUploader.ErrorEvent += new Pacifica.Core.MessageEventHandler(myEMSLUpload_ErrorEvent);
-			
+
 			mMyEMSLUploader.StatusUpdate += new Pacifica.Core.StatusUpdateEventHandler(myEMSLUpload_StatusUpdate);
 			mMyEMSLUploader.UploadCompleted += new UploadCompletedEventHandler(myEMSLUpload_UploadCompleted);
 
 
 		}
 
-		protected List<clsDataPackageInfo> LookupDataPkgInfo(List<int> lstDataPkgIDs)
+		protected List<clsDataPackageInfo> LookupDataPkgInfo(List<KeyValuePair<int, int>> lstDataPkgIDs)
 		{
 			var lstDataPkgInfo = new List<clsDataPackageInfo>();
 
@@ -392,15 +445,33 @@ namespace DataPackage_Archive_Manager
 				{
 					cnDB.Open();
 
-					string sql = " SELECT ID, Name, Created, Package_File_Folder, Share_Path, Local_Path " +
-								 " FROM V_Data_Package_Export";
+					var sql = new StringBuilder();
+
+					sql.Append(" SELECT ID, Name, Created, Package_File_Folder, Share_Path, Local_Path FROM V_Data_Package_Export");
 
 					if (lstDataPkgIDs.Count > 0)
-						sql += " WHERE ID IN (" + string.Join(",", lstDataPkgIDs) + ")";
+					{
+						sql.Append(" WHERE ");
 
-					sql += " ORDER BY ID";
+						for (int i = 0; i < lstDataPkgIDs.Count; i++)
+						{
+							if (i > 0)
+								sql.Append(" OR ");
 
-					var cmd = new SqlCommand(sql, cnDB);
+							if (lstDataPkgIDs[i].Key == lstDataPkgIDs[i].Value)
+								sql.Append("ID = " + lstDataPkgIDs[i].Key);
+							else if (lstDataPkgIDs[i].Value < 0)
+								sql.Append("ID >= " + lstDataPkgIDs[i].Key);
+							else
+								sql.Append("ID BETWEEN " + lstDataPkgIDs[i].Key + " AND " + lstDataPkgIDs[i].Value);
+						}
+
+					}
+
+
+					sql.Append(" ORDER BY ID");
+
+					var cmd = new SqlCommand(sql.ToString(), cnDB);
 					var reader = cmd.ExecuteReader();
 
 					while (reader.Read())
@@ -432,25 +503,69 @@ namespace DataPackage_Archive_Manager
 
 		}
 
-		public List<int> ParseDataPkgIDList(string dataPkgIDList)
+		/// <summary>
+		/// Parses a list of data package IDs (or ID ranges) separated commas
+		/// </summary>
+		/// <param name="dataPkgIDList"></param>
+		/// <returns>List of KeyValue pairs where the key is the start ID and the value is the end ID</returns>
+		/// <remarks>
+		/// To indicate a range of 300 or higher, use "300-"
+		/// In that case, the KeyValuePair will be (300,-1)</remarks>
+		public List<KeyValuePair<int, int>> ParseDataPkgIDList(string dataPkgIDList)
 		{
 
-			List<string> lstValues = dataPkgIDList.Split(',').ToList();
-			List<int> lstDataPkgIDs = new List<int>();
+			var lstValues = dataPkgIDList.Split(',').ToList();
+			var lstDataPkgIDs = new List<KeyValuePair<int, int>>();
 
 			foreach (var item in lstValues)
 			{
 				if (!string.IsNullOrWhiteSpace(item))
 				{
-					int dataPkgID;
-					if (int.TryParse(item, out dataPkgID))
+					string startID;
+					string endID;
+
+					// Check for a range of data package IDs
+					int dashIndex = item.IndexOf("-");
+					if (dashIndex == 0)
 					{
-						if (!lstDataPkgIDs.Contains(dataPkgID))
-							lstDataPkgIDs.Add(dataPkgID);
+						if (item.Length == 1)
+						{
+							ReportError("Invalid item; ignoring: " + item);
+							continue;
+						}
+
+						// Range is 0 through the number after the dash
+						startID = "0";
+						endID = item.Substring(dashIndex + 1);
+					}
+					else if (dashIndex > 0)
+					{
+						// Range is 0 through the number after the dash
+						startID = item.Substring(0, dashIndex);
+
+						if (dashIndex == item.Length - 1)
+							endID = "-1";
+						else
+							endID = item.Substring(dashIndex + 1);
 					}
 					else
 					{
-						ReportError("Value is not an integer in ParseDataPkgIDList; ignoring: " + item);
+						startID = item;
+						endID = item;
+					}
+
+					int dataPkgIDStart;
+					int dataPkgIDEnd;
+					if (int.TryParse(startID, out dataPkgIDStart) && int.TryParse(endID, out dataPkgIDEnd))
+					{
+						KeyValuePair<int, int> idRange = new KeyValuePair<int, int>(dataPkgIDStart, dataPkgIDEnd);
+
+						if (!lstDataPkgIDs.Contains(idRange))
+							lstDataPkgIDs.Add(idRange);
+					}
+					else
+					{
+						ReportError("Value is not an integer or range of integers; ignoring: " + item);
 					}
 				}
 			}
@@ -459,7 +574,12 @@ namespace DataPackage_Archive_Manager
 
 		}
 
-		public bool ProcessDataPackages(List<int> lstDataPkgIDs)
+		/// <summary>
+		/// Update the data packages in lstDataPkgIDs
+		/// </summary>
+		/// <param name="lstDataPkgIDs"></param>
+		/// <returns></returns>
+		public bool ProcessDataPackages(List<KeyValuePair<int, int>> lstDataPkgIDs)
 		{
 
 			int dataPackagesToProcess = 0;
@@ -672,7 +792,7 @@ namespace DataPackage_Archive_Manager
 					var tsElapsedTime = System.DateTime.UtcNow.Subtract(dtStartTime);
 
 					uploadInfo.UploadTimeSeconds = tsElapsedTime.TotalSeconds;
-					uploadInfo.StatusURI = statusURL;					
+					uploadInfo.StatusURI = statusURL;
 
 					if (success)
 					{
@@ -690,7 +810,7 @@ namespace DataPackage_Archive_Manager
 						uploadInfo.ErrorCode = mMyEMSLUploader.ErrorMessage.GetHashCode();
 						if (uploadInfo.ErrorCode == 0)
 							uploadInfo.ErrorCode = 1;
-					}					
+					}
 
 					// Post the StatusURI info to the database
 					StoreMyEMSLUploadStats(dataPkgInfo, uploadInfo);
@@ -752,7 +872,13 @@ namespace DataPackage_Archive_Manager
 			this.ErrorMessage = string.Copy(message);
 		}
 
-		public bool StartProcessing(List<int> lstDataPkgIDs, bool previewMode)
+		/// <summary>
+		/// Update the data packages in lstDataPkgIDs, then verify the upload status
+		/// </summary>
+		/// <param name="lstDataPkgIDs"></param>
+		/// <param name="previewMode"></param>
+		/// <returns></returns>
+		public bool StartProcessing(List<KeyValuePair<int, int>> lstDataPkgIDs, bool previewMode)
 		{
 
 			this.PreviewMode = previewMode;
@@ -847,7 +973,7 @@ namespace DataPackage_Archive_Manager
 		}
 
 		protected bool UpdateMyEMSLUploadStatus(udtMyEMSLStatusInfo statusInfo, bool available, bool verified)
-		{			
+		{
 
 			try
 			{
@@ -885,7 +1011,7 @@ namespace DataPackage_Archive_Manager
 				}
 				else
 				{
-					ReportMessage("Calling " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Data Package " + statusInfo.DataPackageID, clsLogTools.LogLevels.DEBUG);
+					ReportMessage("  Calling " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Data Package " + statusInfo.DataPackageID, clsLogTools.LogLevels.DEBUG);
 				}
 
 				m_ExecuteSP.TimeoutSeconds = 20;
@@ -985,7 +1111,7 @@ namespace DataPackage_Archive_Manager
 							available = false;
 						}
 					}
-					
+
 					if (!available && System.DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 24)
 					{
 						ReportError("Data package " + statusInfo.Value.DataPackageID + " is not available in MyEMSL after 24 hours; see " + statusInfo.Value.StatusURI, true);
@@ -1036,9 +1162,9 @@ namespace DataPackage_Archive_Manager
 									}
 								}
 							}
-							
+
 						}
-					}					
+					}
 
 				}
 				catch (Exception ex)
@@ -1101,7 +1227,7 @@ namespace DataPackage_Archive_Manager
 				mLastStatusUpdate = DateTime.UtcNow;
 				ReportMessage(e.StatusMessage, clsLogTools.LogLevels.DEBUG);
 			}
-			
+
 		}
 
 		void myEMSLUpload_UploadCompleted(object sender, Pacifica.Core.UploadCompletedEventArgs e)
@@ -1114,7 +1240,7 @@ namespace DataPackage_Archive_Manager
 				msg += ": empty server reponse";
 			else
 				msg += ": " + e.ServerResponse;
-	
+
 			ReportMessage(msg, clsLogTools.LogLevels.INFO);
 		}
 
