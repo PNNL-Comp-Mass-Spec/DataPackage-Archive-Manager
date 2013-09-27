@@ -106,6 +106,7 @@ namespace DataPackage_Archive_Manager
 			catch (Exception ex)
 			{
 				Console.WriteLine("Error occurred in Program->Main: " + Environment.NewLine + ex.Message);
+				Console.WriteLine(ex.StackTrace);
 				return -1;
 			}
 

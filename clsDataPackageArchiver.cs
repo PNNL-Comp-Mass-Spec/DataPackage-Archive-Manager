@@ -139,7 +139,7 @@ namespace DataPackage_Archive_Manager
 			if (lstDataPackageFilesAll.Count == 0)
 			{
 				// Nothing to archive; this is not an error
-				ReportMessage("Data package " + dataPkgInfo.ID + " does not have any files; nothing to archive", clsLogTools.LogLevels.INFO);
+				ReportMessage("Data package " + dataPkgInfo.ID + " does not have any files; nothing to archive", clsLogTools.LogLevels.DEBUG);
 				ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
 				return new List<FileInfoObject>();
 			}
@@ -231,7 +231,9 @@ namespace DataPackage_Archive_Manager
 				return new List<FileInfoObject>();
 			}
 
-			DateTime dtLastProgress = System.DateTime.UtcNow;
+			// Note: subtracting 60 seconds from UtcNow when initialize dtLastProgress so that a progress message will appear as an "INFO" level log message if 5 seconds elapses
+			// After that, the INFO level messages will appear every 30 seconds
+			DateTime dtLastProgress = System.DateTime.UtcNow.AddSeconds(-60);
 			DateTime dtLastProgressDetail = System.DateTime.UtcNow;
 
 			int filesProcessed = 0;
@@ -303,7 +305,7 @@ namespace DataPackage_Archive_Manager
 			if (lstDatasetFilesToArchive.Count == 0)
 			{
 				// Nothing to archive; this is not an error
-				ReportMessage("All files for data package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, clsLogTools.LogLevels.INFO);
+				ReportMessage("All files for data package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, clsLogTools.LogLevels.DEBUG);
 				ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
 				return lstDatasetFilesToArchive;
 			}
@@ -410,7 +412,6 @@ namespace DataPackage_Archive_Manager
 
 			// Set up the loggers
 			string logFileName = @"Logs\DataPkgArchiver";
-
 			clsLogTools.CreateFileLogger(logFileName, this.LogLevel);
 
 			clsLogTools.CreateDbLogger(this.DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
@@ -582,15 +583,14 @@ namespace DataPackage_Archive_Manager
 		public bool ProcessDataPackages(List<KeyValuePair<int, int>> lstDataPkgIDs)
 		{
 
-			int dataPackagesToProcess = 0;
+			List<clsDataPackageInfo> lstDataPkgInfo = new List<clsDataPackageInfo>();
 			int successCount = 0;
 
 			try
 			{
-				List<clsDataPackageInfo> lstDataPkgInfo = LookupDataPkgInfo(lstDataPkgIDs);
-				dataPackagesToProcess = lstDataPkgInfo.Count;
+				lstDataPkgInfo = LookupDataPkgInfo(lstDataPkgIDs);
 
-				if (dataPackagesToProcess == 0)
+				if (lstDataPkgInfo.Count == 0)
 				{
 					ReportError("None of the data packages in lstDataPkgIDs corresponded to a known data package ID");
 					return false;
@@ -671,19 +671,26 @@ namespace DataPackage_Archive_Manager
 				return false;
 			}
 
-			if (successCount == dataPackagesToProcess)
+			if (successCount == lstDataPkgInfo.Count)
+			{
+				if (successCount == 1)
+					ReportMessage("Processing complete for data package " + lstDataPkgInfo.First().ID);
+				else
+					ReportMessage("Processed " + successCount + " data packages");
+
 				return true;
+			}
 			else
 			{
 				if (this.PreviewMode)
 					return true;
 
-				if (dataPackagesToProcess == 1)
+				if (lstDataPkgInfo.Count == 1)
 					ReportError("Failed to archive data package " + lstDataPkgIDs.First());
 				else if (successCount == 0)
 					ReportError("Failed to archive any of the " + lstDataPkgIDs.Count + " candidate data packages", true);
 				else
-					ReportError("Failed to archive " + (dataPackagesToProcess - successCount).ToString() + " data package(s); successfully archived " + successCount + " data package(s)", true);
+					ReportError("Failed to archive " + (lstDataPkgInfo.Count - successCount).ToString() + " data package(s); successfully archived " + successCount + " data package(s)", true);
 
 				return false;
 			}
@@ -773,6 +780,7 @@ namespace DataPackage_Archive_Manager
 				else
 				{
 					// Upload the files
+					ReportMessage("Uploading " + lstUnmatchedFiles + " new/changed files for Data Package " + dataPkgInfo.ID);
 
 					Upload.udtUploadMetadata uploadMetadata = new Upload.udtUploadMetadata();
 					uploadMetadata.Clear();
@@ -1149,7 +1157,7 @@ namespace DataPackage_Archive_Manager
 
 								if (fiMetadataFile.Exists)
 								{
-									string msg = "Deleting metadata file since Data Package " + statusInfo.Value.DataPackageID + " is now available and verified: " + fiMetadataFile.FullName;
+									string msg = "Deleting metadata file for Data Package " + statusInfo.Value.DataPackageID + " since it is now available and verified: " + fiMetadataFile.FullName;
 
 									if (this.PreviewMode)
 									{
