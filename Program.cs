@@ -24,6 +24,8 @@ namespace DataPackage_Archive_Manager
 		protected static clsLogTools.LogLevels mLogLevel;
 
 		protected static string mDataPkgIDList;
+		protected static DateTime mDateThreshold;
+
 		protected static bool mPreviewMode;
 		protected static bool mVerifyOnly;
 
@@ -36,6 +38,7 @@ namespace DataPackage_Archive_Manager
 			mLogLevel = clsLogTools.LogLevels.INFO;
 
 			mDataPkgIDList = string.Empty;
+			mDateThreshold = DateTime.MinValue;
 			mPreviewMode = false;
 			mVerifyOnly = false;
 
@@ -92,7 +95,7 @@ namespace DataPackage_Archive_Manager
 						}
 
 						// Upload new data, then verify previously updated data
-						success = archiver.StartProcessing(lstDataPkgIDs, mPreviewMode);
+						success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
 					}
 				
 					if (!success)
@@ -123,7 +126,7 @@ namespace DataPackage_Archive_Manager
 			// Returns True if no problems; otherwise, returns false
 
 			string strValue = string.Empty;
-			List<string> lstValidParameters = new List<string> { "Preview", "V", "Debug", "DB"};
+			List<string> lstValidParameters = new List<string> { "D", "Preview", "V", "Debug", "DB"};
 
 			try
 			{
@@ -147,6 +150,23 @@ namespace DataPackage_Archive_Manager
 						if (objParseCommandLine.NonSwitchParameterCount > 0)
 						{
 							mDataPkgIDList = objParseCommandLine.RetrieveNonSwitchParameter(0);
+						}
+
+						if (objParseCommandLine.RetrieveValueForParameter("D", out strValue))
+						{
+							if (string.IsNullOrWhiteSpace(strValue))
+								ShowErrorMessage("/D does not have a date; date threshold will not be used");
+							else
+							{
+								DateTime dtThreshold;
+								if (DateTime.TryParse(strValue, out dtThreshold))
+								{
+									mDateThreshold = dtThreshold;
+								}
+								else
+									ShowErrorMessage("Invalid date specified with /D:" + strValue);
+							}
+								
 						}
 
 						if (objParseCommandLine.IsParameterPresent("Preview"))
@@ -234,10 +254,13 @@ namespace DataPackage_Archive_Manager
 				Console.WriteLine();
 				Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
-				Console.WriteLine(" DataPackageIDList [/Preview] [/V] [/DB:ConnectionString] [/Debug]");
+				Console.WriteLine(" DataPackageIDList [/D:DateThreshold] [/Preview] [/V] [/DB:ConnectionString] [/Debug]");
 
 				Console.WriteLine();
 				Console.WriteLine("DataPackageIDList can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages");
+				Console.WriteLine("Items in DataPackageIDList can be ID ranges, for example 880-885 or even 892-");
+				Console.WriteLine();
+				Console.WriteLine("Use /D to specify a date threshold for finding modified data packages; if a data package does not have any files modified on/after the /D date, then the data package will not be uploaded to MyEMSL");
 				Console.WriteLine();
 				Console.WriteLine("Use /Preview to preview any files that would be uploaded");
 				Console.WriteLine("Note that when uploading files this program must be run as user pnl\\svc-dms");

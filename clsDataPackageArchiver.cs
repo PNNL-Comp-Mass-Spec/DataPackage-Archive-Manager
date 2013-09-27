@@ -26,9 +26,9 @@ namespace DataPackage_Archive_Manager
 		/// <remarks>
 		/// Since data package uploads always work with the entire data package folder and all subfolders,
 		///   this a maximum cap on the number of files that will be stored in MyEMSL for a given data package
-		/// If a data package has more than 500 files, then zip up groups of files before archiving to MyEMSL
+		/// If a data package has more than 600 files, then zip up groups of files before archiving to MyEMSL
 		/// </remarks>
-		protected const int MAX_FILES_TO_ARCHIVE = 500;
+		protected const int MAX_FILES_TO_ARCHIVE = 600;
 
 		#endregion
 
@@ -120,9 +120,24 @@ namespace DataPackage_Archive_Manager
 				return 0;
 		}
 
+
+		protected int CountFilesForDataPackage(clsDataPackageInfo dataPkgInfo)
+		{
+			var diDataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
+			if (!diDataPkg.Exists)
+				diDataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
+
+			if (!diDataPkg.Exists)
+				return 0;
+			else
+				return diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
+
+		}
+
 		protected List<FileInfoObject> FindDataPackageFilesToArchive(
 			clsDataPackageInfo dataPkgInfo,
 			DirectoryInfo diDataPkg,
+			DateTime dateThreshold,
 			MyEMSLReader.DatasetPackageListInfo dataPackageInfoCache,
 			out udtMyEMSLUploadInfo uploadInfo)
 		{
@@ -140,7 +155,6 @@ namespace DataPackage_Archive_Manager
 			{
 				// Nothing to archive; this is not an error
 				ReportMessage("Data package " + dataPkgInfo.ID + " does not have any files; nothing to archive", clsLogTools.LogLevels.DEBUG);
-				ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
 				return new List<FileInfoObject>();
 			}
 
@@ -231,6 +245,31 @@ namespace DataPackage_Archive_Manager
 				return new List<FileInfoObject>();
 			}
 
+			// Make sure at least one of the files was modified after the date threshold
+			bool passesDateThreshold = false;
+			foreach (var fiLocalFile in lstDataPackageFiles)
+			{
+				if (fiLocalFile.LastWriteTime >= dateThreshold)
+				{
+					passesDateThreshold = true;
+					break;
+				}
+			}
+
+			if (!passesDateThreshold)
+			{
+				// None of the modified files passes the date threshold
+				string msg;
+
+				if (lstDataPackageFilesAll.Count == 1)
+					msg = "Data package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
+				else
+					msg = "Data package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
+
+				ReportMessage(msg + "; nothing to archive", clsLogTools.LogLevels.DEBUG);
+				return new List<FileInfoObject>();
+			}
+
 			// Note: subtracting 60 seconds from UtcNow when initialize dtLastProgress so that a progress message will appear as an "INFO" level log message if 5 seconds elapses
 			// After that, the INFO level messages will appear every 30 seconds
 			DateTime dtLastProgress = System.DateTime.UtcNow.AddSeconds(-60);
@@ -306,7 +345,6 @@ namespace DataPackage_Archive_Manager
 			{
 				// Nothing to archive; this is not an error
 				ReportMessage("All files for data package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, clsLogTools.LogLevels.DEBUG);
-				ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
 				return lstDatasetFilesToArchive;
 			}
 
@@ -333,6 +371,16 @@ namespace DataPackage_Archive_Manager
 			else
 				return (string)value;
 
+		}
+
+		protected List<clsDataPackageInfo> GetFilteredDataPackageInfoList(List<clsDataPackageInfo> lstDataPkgInfo, List<int> dataPkgGroup)
+		{
+			var lstFilteredDataPkgInfo = 
+				(from item in lstDataPkgInfo
+				 join dataPkgID in dataPkgGroup on item.ID equals dataPkgID
+				 select item).ToList();
+
+			return lstFilteredDataPkgInfo;
 		}
 
 		protected Dictionary<int, udtMyEMSLStatusInfo> GetStatusURIs(int retryCount)
@@ -580,7 +628,7 @@ namespace DataPackage_Archive_Manager
 		/// </summary>
 		/// <param name="lstDataPkgIDs"></param>
 		/// <returns></returns>
-		public bool ProcessDataPackages(List<KeyValuePair<int, int>> lstDataPkgIDs)
+		public bool ProcessDataPackages(List<KeyValuePair<int, int>> lstDataPkgIDs, DateTime dateThreshold)
 		{
 
 			List<clsDataPackageInfo> lstDataPkgInfo = new List<clsDataPackageInfo>();
@@ -610,14 +658,15 @@ namespace DataPackage_Archive_Manager
 				// List of groups of data package IDs
 				var lstDataPkgGroups = new List<List<int>>();
 				var lstCurrentGroup = new List<int>();
+				DateTime dtLastProgress = DateTime.UtcNow.AddSeconds(-15);
 
 				int runningCount = 0;
 
 				// Determine the number of files that are associated with each data package
 				// We will use this information to process the data packages in chunks
-				foreach (var dataPkgInfo in lstDataPkgInfo)
+				for (int i = 0; i < lstDataPkgInfo.Count; i++)
 				{
-					int fileCount = CountFilesForDataPackage(dataPkgInfo);
+					int fileCount = CountFilesForDataPackage(lstDataPkgInfo[i]);
 
 					if (runningCount + fileCount > 5000)
 					{
@@ -627,16 +676,21 @@ namespace DataPackage_Archive_Manager
 
 						// Make a new group
 						lstCurrentGroup = new List<int>();
-						lstCurrentGroup.Add(dataPkgInfo.ID);
+						lstCurrentGroup.Add(lstDataPkgInfo[i].ID);
 						runningCount = fileCount;
 					}
 					else
 					{
 						// Use the current group
-						lstCurrentGroup.Add(dataPkgInfo.ID);
+						lstCurrentGroup.Add(lstDataPkgInfo[i].ID);
 						runningCount += fileCount;
 					}
 
+					if (DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 20)
+					{
+						dtLastProgress = DateTime.UtcNow;
+						ReportMessage("Finding data package files; examined " + i + " of " + lstDataPkgInfo.Count + " data packages");
+					}
 				}
 
 				// Store the current group
@@ -651,12 +705,15 @@ namespace DataPackage_Archive_Manager
 						dataPackageInfoCache.AddDataPackage(dataPkgID);
 					}
 
-					// Prepopulate lstDataPackageInfoCache with the files for the current group
+					// Pre-populate lstDataPackageInfoCache with the files for the current group
 					dataPackageInfoCache.RefreshInfo();
 
-					foreach (var dataPkgInfo in lstDataPkgInfo)
+					// Obtain the clsDataPackageInfo objects for the IDs in dataPkgGroup
+					var lstFilteredDataPkgInfo = GetFilteredDataPackageInfoList(lstDataPkgInfo, dataPkgGroup);
+
+					foreach (var dataPkgInfo in lstFilteredDataPkgInfo)
 					{
-						bool success = ProcessOneDataPackage(dataPkgInfo, dataPackageInfoCache);
+						bool success = ProcessOneDataPackage(dataPkgInfo, dateThreshold, dataPackageInfoCache);
 
 						if (success)
 							successCount += 1;
@@ -697,20 +754,7 @@ namespace DataPackage_Archive_Manager
 
 		}
 
-		protected int CountFilesForDataPackage(clsDataPackageInfo dataPkgInfo)
-		{
-			var diDataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
-			if (!diDataPkg.Exists)
-				diDataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
-
-			if (!diDataPkg.Exists)
-				return 0;
-			else
-				return diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
-
-		}
-
-		protected bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, MyEMSLReader.DatasetPackageListInfo dataPackageInfoCache)
+		protected bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, DateTime dateThreshold, MyEMSLReader.DatasetPackageListInfo dataPackageInfoCache)
 		{
 			bool success = false;
 			udtMyEMSLUploadInfo uploadInfo = new udtMyEMSLUploadInfo();
@@ -751,7 +795,7 @@ namespace DataPackage_Archive_Manager
 				}
 
 				// Compare the files to those already in MyEMSL to create a list of files to be uploaded
-				List<FileInfoObject> lstUnmatchedFiles = FindDataPackageFilesToArchive(dataPkgInfo, diDataPkg, dataPackageInfoCache, out uploadInfo);
+				List<FileInfoObject> lstUnmatchedFiles = FindDataPackageFilesToArchive(dataPkgInfo, diDataPkg, dateThreshold, dataPackageInfoCache, out uploadInfo);
 
 				if (lstUnmatchedFiles.Count == 0)
 				{
@@ -886,13 +930,13 @@ namespace DataPackage_Archive_Manager
 		/// <param name="lstDataPkgIDs"></param>
 		/// <param name="previewMode"></param>
 		/// <returns></returns>
-		public bool StartProcessing(List<KeyValuePair<int, int>> lstDataPkgIDs, bool previewMode)
+		public bool StartProcessing(List<KeyValuePair<int, int>> lstDataPkgIDs, DateTime dateThreshold, bool previewMode)
 		{
 
 			this.PreviewMode = previewMode;
 
 			// Upload new data
-			bool success = ProcessDataPackages(lstDataPkgIDs);
+			bool success = ProcessDataPackages(lstDataPkgIDs, dateThreshold);
 
 			// Verify uploaded data (even if success is false)
 			// We're setting PreviewMode again in case it was auto-set to True because the current user is not svc-dms
