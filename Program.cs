@@ -18,7 +18,7 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "September 26, 2013";
+		public const string PROGRAM_DATE = "October 3, 2013";
 
 		protected static string mDBConnectionString;
 		protected static clsLogTools.LogLevels mLogLevel;
@@ -31,8 +31,7 @@ namespace DataPackage_Archive_Manager
 
 		public static int Main(string[] args)
 		{
-			FileProcessor.clsParseCommandLine objParseCommandLine = new FileProcessor.clsParseCommandLine();
-			bool success = false;
+			var objParseCommandLine = new FileProcessor.clsParseCommandLine();
 
 			mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
 			mLogLevel = clsLogTools.LogLevels.INFO;
@@ -44,7 +43,7 @@ namespace DataPackage_Archive_Manager
 
 			try
 			{
-				success = false;
+				bool success = false;
 
 				if (objParseCommandLine.ParseCommandLine())
 				{
@@ -63,11 +62,11 @@ namespace DataPackage_Archive_Manager
 				}
 				else
 				{
-					clsDataPackageArchiver archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
+					var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
 
 					// Attach the events
-					archiver.ErrorEvent	+=new MessageEventHandler(archiver_ErrorEvent);
-					archiver.MessageEvent+=new MessageEventHandler(archiver_MessageEvent);
+					archiver.ErrorEvent += new MessageEventHandler(archiver_ErrorEvent);
+					archiver.MessageEvent += new MessageEventHandler(archiver_MessageEvent);
 
 					if (mVerifyOnly)
 					{
@@ -97,7 +96,7 @@ namespace DataPackage_Archive_Manager
 						// Upload new data, then verify previously updated data
 						success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
 					}
-				
+
 					if (!success)
 					{
 						ShowErrorMessage("Error archiving the data packages: " + archiver.ErrorMessage);
@@ -124,16 +123,14 @@ namespace DataPackage_Archive_Manager
 		private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
 		{
 			// Returns True if no problems; otherwise, returns false
-
-			string strValue = string.Empty;
-			List<string> lstValidParameters = new List<string> { "D", "Preview", "V", "Debug", "DB"};
+			var lstValidParameters = new List<string> { "D", "Preview", "V", "Debug", "DB" };
 
 			try
 			{
 				// Make sure no invalid parameters are present
 				if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
 				{
-					List<string> badArguments = new List<string>();
+					var badArguments = new List<string>();
 					foreach (string item in objParseCommandLine.InvalidParameters(lstValidParameters))
 					{
 						badArguments.Add("/" + item);
@@ -143,61 +140,58 @@ namespace DataPackage_Archive_Manager
 
 					return false;
 				}
-				else
+
+				// Query objParseCommandLine to see if various parameters are present						
+				if (objParseCommandLine.NonSwitchParameterCount > 0)
 				{
-					{
-						// Query objParseCommandLine to see if various parameters are present						
-						if (objParseCommandLine.NonSwitchParameterCount > 0)
-						{
-							mDataPkgIDList = objParseCommandLine.RetrieveNonSwitchParameter(0);
-						}
-
-						if (objParseCommandLine.RetrieveValueForParameter("D", out strValue))
-						{
-							if (string.IsNullOrWhiteSpace(strValue))
-								ShowErrorMessage("/D does not have a date; date threshold will not be used");
-							else
-							{
-								DateTime dtThreshold;
-								if (DateTime.TryParse(strValue, out dtThreshold))
-								{
-									mDateThreshold = dtThreshold;
-								}
-								else
-									ShowErrorMessage("Invalid date specified with /D:" + strValue);
-							}
-								
-						}
-
-						if (objParseCommandLine.IsParameterPresent("Preview"))
-						{
-							mPreviewMode = true;
-						}
-
-						if (objParseCommandLine.IsParameterPresent("V"))
-						{
-							mVerifyOnly = true;
-						}
-
-						if (objParseCommandLine.IsParameterPresent("Debug"))
-						{
-							mLogLevel = clsLogTools.LogLevels.DEBUG;
-
-						}						
-
-						if (objParseCommandLine.RetrieveValueForParameter("DB", out strValue))
-						{
-							if (string.IsNullOrWhiteSpace(strValue))
-								ShowErrorMessage("/DB does not have a value; not overriding the connection string");
-							else
-								mDBConnectionString = strValue;								
-						}
-						
-					}
-
-					return true;
+					mDataPkgIDList = objParseCommandLine.RetrieveNonSwitchParameter(0);
 				}
 
+				string strValue;
+				if (objParseCommandLine.RetrieveValueForParameter("D", out strValue))
+				{
+					if (string.IsNullOrWhiteSpace(strValue))
+						ShowErrorMessage("/D does not have a date; date threshold will not be used");
+					else
+					{
+						DateTime dtThreshold;
+						if (DateTime.TryParse(strValue, out dtThreshold))
+						{
+							mDateThreshold = dtThreshold;
+						}
+						else
+							ShowErrorMessage("Invalid date specified with /D:" + strValue);
+					}
+
+				}
+
+				if (objParseCommandLine.IsParameterPresent("Preview"))
+				{
+					mPreviewMode = true;
+				}
+
+				if (objParseCommandLine.IsParameterPresent("V"))
+				{
+					mVerifyOnly = true;
+				}
+
+				if (objParseCommandLine.IsParameterPresent("Debug"))
+				{
+					mLogLevel = clsLogTools.LogLevels.DEBUG;
+
+				}
+
+				if (objParseCommandLine.RetrieveValueForParameter("DB", out strValue))
+				{
+					if (string.IsNullOrWhiteSpace(strValue))
+						ShowErrorMessage("/DB does not have a value; not overriding the connection string");
+					else
+						mDBConnectionString = strValue;
+				}
+
+
+
+				return true;
 			}
 			catch (Exception ex)
 			{
@@ -210,7 +204,7 @@ namespace DataPackage_Archive_Manager
 
 		private static void ShowErrorMessage(string strMessage)
 		{
-			string strSeparator = "------------------------------------------------------------------------------";
+			const string strSeparator = "------------------------------------------------------------------------------";
 
 			Console.WriteLine();
 			Console.WriteLine(strSeparator);
@@ -221,9 +215,9 @@ namespace DataPackage_Archive_Manager
 			WriteToErrorStream(strMessage);
 		}
 
-		private static void ShowErrorMessage(string strTitle, List<string> items)
+		private static void ShowErrorMessage(string strTitle, IEnumerable<string> items)
 		{
-			string strSeparator = "------------------------------------------------------------------------------";
+			const string strSeparator = "------------------------------------------------------------------------------";
 			string strMessage = null;
 
 			Console.WriteLine();
@@ -293,11 +287,12 @@ namespace DataPackage_Archive_Manager
 		{
 			try
 			{
-				using (System.IO.StreamWriter swErrorStream = new System.IO.StreamWriter(Console.OpenStandardError()))
+				using (var swErrorStream = new System.IO.StreamWriter(Console.OpenStandardError()))
 				{
 					swErrorStream.WriteLine(strErrorMessage);
 				}
 			}
+			// ReSharper disable once EmptyGeneralCatchClause
 			catch
 			{
 				// Ignore errors here
@@ -327,7 +322,7 @@ namespace DataPackage_Archive_Manager
 
 		static void archiver_MessageEvent(object sender, MessageEventArgs e)
 		{
- 			Console.WriteLine(e.Message);
+			Console.WriteLine(e.Message);
 		}
 
 		#endregion
