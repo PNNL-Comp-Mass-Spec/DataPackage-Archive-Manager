@@ -138,7 +138,7 @@ namespace DataPackage_Archive_Manager
 			clsDataPackageInfo dataPkgInfo,
 			DirectoryInfo diDataPkg,
 			DateTime dateThreshold,
-			MyEMSLReader.DatasetPackageListInfo dataPackageInfoCache,
+			MyEMSLReader.DataPackageListInfo dataPackageInfoCache,
 			out udtMyEMSLUploadInfo uploadInfo)
 		{
 			var lstDatasetFilesToArchive = new List<FileInfoObject>();
@@ -291,6 +291,9 @@ namespace DataPackage_Archive_Manager
 				// Look for this file in MyEMSL
 				var archiveFiles = dataPackageInfoCache.FindFiles(fiLocalFile.Name, subDir, dataPkgInfo.ID);
 
+				if (diDataPkg.Parent == null)
+					throw new DirectoryNotFoundException("Unable to determine the parent folder for directory " + diDataPkg.Name);
+
 				if (archiveFiles.Count == 0)
 				{
 					lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
@@ -315,7 +318,9 @@ namespace DataPackage_Archive_Manager
 
 						if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
 						{
-							lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName, sha1HashHex));
+							string relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.Directory.FullName, diDataPkg.Parent.FullName);
+
+							lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, relativeDestinationDirectory, sha1HashHex));
 							uploadInfo.FileCountUpdated++;
 							uploadInfo.Bytes += fiLocalFile.Length;
 						}
@@ -699,7 +704,7 @@ namespace DataPackage_Archive_Manager
 
 				foreach (var dataPkgGroup in lstDataPkgGroups)
 				{
-					var dataPackageInfoCache = new MyEMSLReader.DatasetPackageListInfo();
+					var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
 					foreach (int dataPkgID in dataPkgGroup)
 					{
 						dataPackageInfoCache.AddDataPackage(dataPkgID);
@@ -754,7 +759,7 @@ namespace DataPackage_Archive_Manager
 
 		}
 
-		protected bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, DateTime dateThreshold, MyEMSLReader.DatasetPackageListInfo dataPackageInfoCache)
+		protected bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, DateTime dateThreshold, MyEMSLReader.DataPackageListInfo dataPackageInfoCache)
 		{
 			bool success = false;
 			udtMyEMSLUploadInfo uploadInfo = new udtMyEMSLUploadInfo();
@@ -1120,7 +1125,7 @@ namespace DataPackage_Archive_Manager
 			int exceptionCount = 0;
 
 			// Confirm that the data package is visible in Elastic Search
-			var dataPackageInfoCache = new MyEMSLReader.DatasetPackageListInfo();
+			var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
 			foreach (var statusInfo in dctURIs)
 			{
 				dataPackageInfoCache.AddDataPackage(statusInfo.Value.DataPackageID);

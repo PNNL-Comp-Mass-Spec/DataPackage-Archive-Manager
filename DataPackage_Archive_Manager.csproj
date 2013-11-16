@@ -46,7 +46,8 @@
       <HintPath>Lib\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MyEMSLReader">
+    <Reference Include="MyEMSLReader, Version=1.0.5067.27946, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>Lib\MyEMSLReader.dll</HintPath>
     </Reference>
     <Reference Include="Pacifica.Core">
