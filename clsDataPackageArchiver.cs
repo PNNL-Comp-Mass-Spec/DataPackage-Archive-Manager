@@ -1086,7 +1086,7 @@ namespace DataPackage_Archive_Manager
 			}
 			catch (Exception ex)
 			{
-				var msg = "Exceptiong calling stored procedure " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS;
+				var msg = "Exception calling stored procedure " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS;
 				clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, msg, ex);
 				return false;
 			}
