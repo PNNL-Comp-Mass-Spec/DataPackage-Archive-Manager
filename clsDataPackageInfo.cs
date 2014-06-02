@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace DataPackage_Archive_Manager
 {
@@ -22,7 +19,7 @@ namespace DataPackage_Archive_Manager
 			this.ID = dataPkgID;
 
 			this.Name = string.Empty;
-			this.Created = System.DateTime.Now;
+			this.Created = DateTime.Now;
 			this.FolderName = string.Empty;
 			this.SharePath = string.Empty;
 			this.LocalPath = string.Empty;

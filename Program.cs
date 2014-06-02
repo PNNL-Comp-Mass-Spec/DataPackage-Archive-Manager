@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace DataPackage_Archive_Manager
 {
@@ -18,7 +16,7 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "November 15, 2013";
+		public const string PROGRAM_DATE = "June 2, 2014";
 
 		protected static string mDBConnectionString;
 		protected static clsLogTools.LogLevels mLogLevel;

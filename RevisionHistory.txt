@@ -1,4 +1,14 @@
 Data Package Archive Manager Change Log
 
-Version 1.0.??; September ??, 2013
+Version 1.0.5266; June 2, 2014
+	- Now checking for duplicate StatusNum values when populating dictionary dctURIs
+	- New version of Pacifica.Core.dll
+
+Version 1.0.5233; April 30, 2014
+	- New MyEMSLReader.dll with longer timeout values
+
+Version 1.0.5067; November 15, 2013
+	- Fix bug storing the relative path when a file needs to be uploaded because the Sha1 hash value doesn't match the value in the archive
+
+Version 1.0.5015; September 24, 2013
 	- Initial Release
