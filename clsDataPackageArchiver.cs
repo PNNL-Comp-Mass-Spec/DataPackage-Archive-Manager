@@ -1146,12 +1146,20 @@ namespace DataPackage_Archive_Manager
 
 					// First check step 5 (Available in MyEMSL)
 					bool accessDenied;
+					bool myEmslException;
 					string statusMessage;
-					var available = statusChecker.IngestStepCompleted(statusInfo.Value.StatusURI, MyEMSLStatusCheck.StatusStep.Available, cookieJar, out accessDenied, out statusMessage);
+					var available = statusChecker.IngestStepCompleted(statusInfo.Value.StatusURI, MyEMSLStatusCheck.StatusStep.Available, cookieJar, out accessDenied, out statusMessage, out myEmslException);
 
 					if (accessDenied)
 					{
 						ReportError("Error looking up archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID + "; " + statusMessage);
+						Utilities.Logout(cookieJar);
+						return false;
+					}
+
+					if (myEmslException)
+					{
+						ReportError("MyEMSL Exception reported for archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID + "; " + statusMessage, true);
 						Utilities.Logout(cookieJar);
 						return false;
 					}

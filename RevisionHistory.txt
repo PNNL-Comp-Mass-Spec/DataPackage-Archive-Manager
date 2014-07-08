@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5302; July 8, 2014
+	- Now checking for exceptions reported by MyEMSL when verifying successful uploads
+
 Version 1.0.5266; June 2, 2014
 	- Now checking for duplicate StatusNum values when populating dictionary dctURIs
 	- New version of Pacifica.Core.dll

@@ -50,7 +50,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Lib\MyEMSLReader.dll</HintPath>
     </Reference>
-    <Reference Include="Pacifica.Core">
+    <Reference Include="Pacifica.Core, Version=2.0.5302.17745, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>Lib\Pacifica.Core.dll</HintPath>
     </Reference>
     <Reference Include="PRISM">
