@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Data.SqlClient;
+using MyEMSLReader;
 using Pacifica.Core;
 
 namespace DataPackage_Archive_Manager
@@ -19,6 +21,12 @@ namespace DataPackage_Archive_Manager
 		protected const string SP_NAME_STORE_MYEMSL_STATS = "StoreMyEMSLUploadStats";
 		protected const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "SetMyEMSLUploadStatus";
 
+		protected enum eUploadStatus
+		{
+			Success = 0,
+			VerificationError = 1,
+			CriticalError = 2
+		}
 
 		/// <summary>
 		/// Maximum number of files to archive
@@ -789,7 +797,8 @@ namespace DataPackage_Archive_Manager
 				}
 
 				// Look for an existing metadata file
-				string metadataFilePath = Path.Combine(diDataPkg.Parent.FullName, Utilities.GetMetadataFilenameForJob(dataPkgInfo.ID.ToString()));
+				// For example, \\protoapps\dataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
+				string metadataFilePath = Path.Combine(diDataPkg.Parent.FullName, Utilities.GetMetadataFilenameForJob(dataPkgInfo.ID.ToString(CultureInfo.InvariantCulture)));
 				var fiMetadataFile = new FileInfo(metadataFilePath);
 				if (fiMetadataFile.Exists)
 				{
@@ -1124,137 +1133,191 @@ namespace DataPackage_Archive_Manager
 				return false;
 			}
 
-			int exceptionCount = 0;
+			// Confirm that the data packages are visible in Elastic Search
+			// To avoid obtaining too many results from MyEMSL, process the data packages in dctURIs in groups, 5 at a time
+			// First construct a unique list of the Data Package IDs in dctURIs
 
-			// Confirm that the data package is visible in Elastic Search
-			var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
-			foreach (var statusInfo in dctURIs)
-			{
-				dataPackageInfoCache.AddDataPackage(statusInfo.Value.DataPackageID);
-			}
-
-			// Prepopulate lstDataPackageInfoCache with the files for the current group
-			dataPackageInfoCache.RefreshInfo();
+			var distinctDataPackageIDs = (from item in dctURIs select item.Value.DataPackageID).Distinct().ToList();
+			const int DATA_PACKAGE_GROUP_SIZE = 5;
 
 			var statusChecker = new MyEMSLStatusCheck();
 
-			foreach (var statusInfo in dctURIs)
+			for (int i = 0; i < distinctDataPackageIDs.Count; i += DATA_PACKAGE_GROUP_SIZE)
 			{
-				try
+				var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
+				var dctURIsInGroup = new Dictionary<int, udtMyEMSLStatusInfo>();
+
+				for (int j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
 				{
-					bool verified = false;
-
-					// First check step 5 (Available in MyEMSL)
-					bool accessDenied;
-					bool myEmslException;
-					string statusMessage;
-					var available = statusChecker.IngestStepCompleted(statusInfo.Value.StatusURI, MyEMSLStatusCheck.StatusStep.Available, cookieJar, out accessDenied, out statusMessage, out myEmslException);
-
-					if (accessDenied)
-					{
-						ReportError("Error looking up archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID + "; " + statusMessage);
-						Utilities.Logout(cookieJar);
-						return false;
-					}
-
-					if (myEmslException)
-					{
-						ReportError("MyEMSL Exception reported for archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID + "; " + statusMessage, true);
-						Utilities.Logout(cookieJar);
-						return false;
-					}
-
-					if (available)
-					{
-						var archiveFiles = dataPackageInfoCache.FindFiles("*", "", statusInfo.Value.DataPackageID);
-
-						if (archiveFiles.Count > 0)
-							ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is available in MyEMSL Elastic Search", clsLogTools.LogLevels.DEBUG);
-						else
-						{
-							ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is not yet available in MyEMSL Elastic Search", clsLogTools.LogLevels.DEBUG);
-							available = false;
-						}
-					}
-
-					if (!available && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 24)
-					{
-						ReportError("Data package " + statusInfo.Value.DataPackageID + " is not available in MyEMSL after 24 hours; see " + statusInfo.Value.StatusURI, true);
-					}
-
-					if (available)
-					{
-						// Next check step 6 (Archived and Sha-1 hash values checked)
-						verified = statusChecker.IngestStepCompleted(statusInfo.Value.StatusURI, MyEMSLStatusCheck.StatusStep.Archived, cookieJar, out accessDenied, out statusMessage);
-
-						if (verified)
-							ReportMessage("Data package " + statusInfo.Value.DataPackageID + " has been verified against expected hash values", clsLogTools.LogLevels.DEBUG);
-					}
-
-					if (!verified && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 48)
-					{
-						ReportError("Data package " + statusInfo.Value.DataPackageID + " has not been validated in the archive after 48 hours; see " + statusInfo.Value.StatusURI, true);
-					}
-
-					if (available || verified)
-					{
-						// Update values in the DB
-						UpdateMyEMSLUploadStatus(statusInfo.Value, available, verified);
-
-						if (available && verified)
-						{
-							var diDataPkg = new DirectoryInfo(statusInfo.Value.LocalPath);
-							if (!diDataPkg.Exists)
-								diDataPkg = new DirectoryInfo(statusInfo.Value.SharePath);
-
-							if (diDataPkg.Exists)
-							{
-								string metadataFilePath = Path.Combine(diDataPkg.Parent.FullName, Utilities.GetMetadataFilenameForJob(statusInfo.Value.DataPackageID.ToString()));
-								var fiMetadataFile = new FileInfo(metadataFilePath);
-
-								if (fiMetadataFile.Exists)
-								{
-									string msg = "Deleting metadata file for Data Package " + statusInfo.Value.DataPackageID + " since it is now available and verified: " + fiMetadataFile.FullName;
-
-									if (this.PreviewMode)
-									{
-										ReportMessage("SIMULATE: " + msg);
-									}
-									else
-									{
-										ReportMessage(msg);
-										fiMetadataFile.Delete();
-									}
-								}
-							}
-
-						}
-					}
-
-				}
-				catch (Exception ex)
-				{
-					exceptionCount++;
-					if (exceptionCount < 3)
-					{
-						ReportMessage("Exception verifying archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID + ": " + ex.Message, clsLogTools.LogLevels.WARN);
-					}
-					else
-					{
-						ReportError("Exception verifying archive status for for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID + ": " + ex.Message, true);
+					if (j >= distinctDataPackageIDs.Count)
 						break;
-					}
+
+					var currentDataPackageID = distinctDataPackageIDs[j];
+					dataPackageInfoCache.AddDataPackage(currentDataPackageID);
+
+					// Find all of the URIs for this data package					
+					foreach (var uriItem in (from item in dctURIs where item.Value.DataPackageID == currentDataPackageID select item))
+						dctURIsInGroup.Add(uriItem.Key, uriItem.Value);
+					
 				}
 
-				exceptionCount = 0;
+				// Prepopulate lstDataPackageInfoCache with the files for the current group
+				dataPackageInfoCache.RefreshInfo();
 
+				foreach (var statusInfo in dctURIsInGroup)
+				{
+					var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, cookieJar, dataPackageInfoCache);
+					
+					if (eResult == eUploadStatus.CriticalError)
+						return false;
+				}
 			}
 
 			Utilities.Logout(cookieJar);
 
 			return true;
 
+		}
 
+		private eUploadStatus VerifyUploadStatusWork(MyEMSLStatusCheck statusChecker, KeyValuePair<int, udtMyEMSLStatusInfo> statusInfo, CookieContainer cookieJar,
+		                                    DataPackageListInfo dataPackageInfoCache)
+		{
+			int exceptionCount = 0;
+
+			try
+			{
+				bool verified = false;
+
+				// First check step 5 (Available in MyEMSL)
+				bool accessDenied;
+				bool myEmslException;
+				string statusMessage;
+				var available = statusChecker.IngestStepCompleted(statusInfo.Value.StatusURI, MyEMSLStatusCheck.StatusStep.Available,
+				                                                  cookieJar, out accessDenied, out statusMessage, out myEmslException);
+
+				if (accessDenied)
+				{
+					ReportError("Error looking up archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
+					            statusInfo.Value.EntryID + "; " + statusMessage);
+					Utilities.Logout(cookieJar);
+					return eUploadStatus.CriticalError;
+				}
+
+				if (myEmslException)
+				{
+					ReportError(
+						"MyEMSL Exception reported for archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
+						statusInfo.Value.EntryID + "; " + statusMessage, true);
+					Utilities.Logout(cookieJar);
+					return eUploadStatus.VerificationError;
+				}
+
+				if (available)
+				{
+					var archiveFiles = dataPackageInfoCache.FindFiles("*", "", statusInfo.Value.DataPackageID);
+
+					if (archiveFiles.Count > 0)
+					{
+						ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is available in MyEMSL Elastic Search",
+						              clsLogTools.LogLevels.DEBUG);
+					}
+					else
+					{
+						ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is not yet available in MyEMSL Elastic Search",
+						              clsLogTools.LogLevels.DEBUG);
+						available = false;
+					}
+				}
+
+				if (!available && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 24)
+				{
+					ReportError(
+						"Data package " + statusInfo.Value.DataPackageID + " is not available in MyEMSL after 24 hours; see " +
+						statusInfo.Value.StatusURI, true);
+				}
+
+				if (available)
+				{
+					// Next check step 6 (Archived and Sha-1 hash values checked)
+					verified = statusChecker.IngestStepCompleted(statusInfo.Value.StatusURI, MyEMSLStatusCheck.StatusStep.Archived,
+					                                             cookieJar, out accessDenied, out statusMessage);
+
+					if (verified)
+					{
+						ReportMessage("Data package " + statusInfo.Value.DataPackageID + " has been verified against expected hash values",
+						              clsLogTools.LogLevels.DEBUG);
+					}
+				}
+
+				if (!verified && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 48)
+				{
+					ReportError(
+						"Data package " + statusInfo.Value.DataPackageID + " has not been validated in the archive after 48 hours; see " +
+						statusInfo.Value.StatusURI, true);
+				}
+
+				if (available || verified)
+				{
+					// Update values in the DB
+					UpdateMyEMSLUploadStatus(statusInfo.Value, available, verified);
+
+					if (available && verified)
+					{
+						var diDataPkg = new DirectoryInfo(statusInfo.Value.LocalPath);
+						if (!diDataPkg.Exists)
+						{
+							diDataPkg = new DirectoryInfo(statusInfo.Value.SharePath);
+						}
+
+						if (diDataPkg.Exists)
+						{
+							// Construct the metadata file path
+							// For example, \\protoapps\dataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
+							string metadataFilePath = Path.Combine(diDataPkg.Parent.FullName,
+							                                       Utilities.GetMetadataFilenameForJob(
+								                                       statusInfo.Value.DataPackageID.ToString(CultureInfo.InvariantCulture)));
+							var fiMetadataFile = new FileInfo(metadataFilePath);
+
+							if (fiMetadataFile.Exists)
+							{
+								string msg = "Deleting metadata file for Data Package " + statusInfo.Value.DataPackageID +
+								             " since it is now available and verified: " + fiMetadataFile.FullName;
+
+								if (this.PreviewMode)
+								{
+									ReportMessage("SIMULATE: " + msg);
+								}
+								else
+								{
+									ReportMessage(msg);
+									fiMetadataFile.Delete();
+								}
+							}
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				exceptionCount++;
+				if (exceptionCount < 3)
+				{
+					ReportMessage(
+						"Exception verifying archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
+						statusInfo.Value.EntryID + ": " + ex.Message, clsLogTools.LogLevels.WARN);
+				}
+				else
+				{
+					ReportError(
+						"Exception verifying archive status for for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
+						statusInfo.Value.EntryID + ": " + ex.Message, true);
+					
+					// Too many errors for this data package; move on to the next one
+					return eUploadStatus.VerificationError;
+				}
+			}
+
+			return eUploadStatus.Success;
 		}
 
 		#region "Events"
