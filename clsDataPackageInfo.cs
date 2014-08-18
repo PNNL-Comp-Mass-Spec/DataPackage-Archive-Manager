@@ -10,6 +10,7 @@ namespace DataPackage_Archive_Manager
 		public string FolderName { get; set; }		// Example: 894_CPTAC_Batch4_Global_CompRef
 		public string SharePath { get; set; }		// Example: \\protoapps\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
 		public string LocalPath { get; set; }		// Example: F:\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
+		public int MyEMSLUploads { get; set; }		// Number of successful uploads for this data package
 
 		/// <summary>
 		/// Constructor

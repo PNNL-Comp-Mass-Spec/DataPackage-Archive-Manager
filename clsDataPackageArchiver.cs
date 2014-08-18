@@ -237,14 +237,14 @@ namespace DataPackage_Archive_Manager
 
 			if (lstDataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
 			{
-				ReportError("Data package " + dataPkgInfo.ID + " has " + lstDataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count; see " + dataPkgInfo.SharePath, true);
+				ReportError(" Data package " + dataPkgInfo.ID + " has " + lstDataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count; see " + dataPkgInfo.SharePath, true);
 				return new List<FileInfoObject>();
 			}
 
 			if (lstDataPackageFiles.Count == 0)
 			{
 				// Nothing to archive; this is not an error
-				string msg = "Data package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all have been skipped";
+				string msg = " Data package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all have been skipped";
 
 				if (lstDataPackageFoldersToSkip.Count > 0)
 					msg += " due to recently modified files in auto-job result folders";
@@ -273,15 +273,15 @@ namespace DataPackage_Archive_Manager
 				string msg;
 
 				if (lstDataPackageFilesAll.Count == 1)
-					msg = "Data package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
+					msg = " Data package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
 				else
-					msg = "Data package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
+					msg = " Data package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
 
 				ReportMessage(msg + "; nothing to archive", clsLogTools.LogLevels.DEBUG);
 				return new List<FileInfoObject>();
 			}
 
-			// Note: subtracting 60 seconds from UtcNow when initialize dtLastProgress so that a progress message will appear as an "INFO" level log message if 5 seconds elapses
+			// Note: subtracting 60 seconds from UtcNow when initializing dtLastProgress so that a progress message will appear as an "INFO" level log message if 5 seconds elapses
 			// After that, the INFO level messages will appear every 30 seconds
 			DateTime dtLastProgress = DateTime.UtcNow.AddSeconds(-60);
 			DateTime dtLastProgressDetail = DateTime.UtcNow;
@@ -324,16 +324,27 @@ namespace DataPackage_Archive_Manager
 					}
 					else
 					{
-						// Compare Sha-1 hash
-						string sha1HashHex = Utilities.GenerateSha1Hash(fiLocalFile.FullName);
+						// File sizes match
+						// Compare Sha-1 hash if the file is less than 1 month old or
+						// if the file is less than 6 months old and less than 50 MB in size
+						
+						const int THRESHOLD_50_MB = 50 * 1024 * 1024;
 
-						if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
+						if (fiLocalFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
+							fiLocalFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && fiLocalFile.Length < THRESHOLD_50_MB)
 						{
-							string relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.Directory.FullName, diDataPkg.Parent.FullName);
+							
+							string sha1HashHex = Utilities.GenerateSha1Hash(fiLocalFile.FullName);
 
-							lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, relativeDestinationDirectory, sha1HashHex));
-							uploadInfo.FileCountUpdated++;
-							uploadInfo.Bytes += fiLocalFile.Length;
+							if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
+							{
+								string relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.Directory.FullName, diDataPkg.Parent.FullName);
+
+								lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, relativeDestinationDirectory, sha1HashHex));
+								uploadInfo.FileCountUpdated++;
+								uploadInfo.Bytes += fiLocalFile.Length;
+							}
+
 						}
 					}
 
@@ -360,7 +371,7 @@ namespace DataPackage_Archive_Manager
 			if (lstDatasetFilesToArchive.Count == 0)
 			{
 				// Nothing to archive; this is not an error
-				ReportMessage("All files for data package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, clsLogTools.LogLevels.DEBUG);
+				ReportMessage(" All files for data package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, clsLogTools.LogLevels.DEBUG);
 				return lstDatasetFilesToArchive;
 			}
 
@@ -375,6 +386,17 @@ namespace DataPackage_Archive_Manager
 				return DateTime.Now;
 			else
 				return (DateTime)value;
+
+		}
+
+		protected int GetDBInt(SqlDataReader reader, string columnName)
+		{
+			object value = reader[columnName];
+
+			if (Convert.IsDBNull(value))
+				return 0;
+			else
+				return (int)value;
 
 		}
 
@@ -519,7 +541,7 @@ namespace DataPackage_Archive_Manager
 
 					var sql = new StringBuilder();
 
-					sql.Append(" SELECT ID, Name, Created, Package_File_Folder, Share_Path, Local_Path FROM V_Data_Package_Export");
+					sql.Append(" SELECT ID, Name, Created, Package_File_Folder, Share_Path, Local_Path, MyEMSL_Uploads FROM V_Data_Package_Export");
 
 					if (lstDataPkgIDs.Count > 0)
 					{
@@ -556,7 +578,8 @@ namespace DataPackage_Archive_Manager
 							Created = GetDBDate(reader, "Created"),
 							FolderName = GetDBString(reader, "Package_File_Folder"),
 							SharePath = GetDBString(reader, "Share_Path"),
-							LocalPath = GetDBString(reader, "Local_Path")
+							LocalPath = GetDBString(reader, "Local_Path"),
+							MyEMSLUploads = GetDBInt(reader, "MyEMSL_Uploads")
 						};
 
 						lstDataPkgInfo.Add(dataPkgInfo);
@@ -681,9 +704,11 @@ namespace DataPackage_Archive_Manager
 				// List of groups of data package IDs
 				var lstDataPkgGroups = new List<List<int>>();
 				var lstCurrentGroup = new List<int>();
-				DateTime dtLastProgress = DateTime.UtcNow.AddSeconds(-15);
+				DateTime dtLastProgress = DateTime.UtcNow.AddSeconds(-10);
 
 				int runningCount = 0;
+
+				ReportMessage("Finding data package files for " + lstDataPkgInfo.Count + " data packages");
 
 				// Determine the number of files that are associated with each data package
 				// We will use this information to process the data packages in chunks
@@ -691,7 +716,7 @@ namespace DataPackage_Archive_Manager
 				{
 					int fileCount = CountFilesForDataPackage(lstDataPkgInfo[i]);
 
-					if (runningCount + fileCount > 5000)
+					if (runningCount + fileCount > 5000 || lstCurrentGroup.Count >= 30)
 					{
 						// Store the current group
 						if (lstCurrentGroup.Count > 0)
@@ -722,8 +747,12 @@ namespace DataPackage_Archive_Manager
 				if (lstCurrentGroup.Count > 0)
 					lstDataPkgGroups.Add(lstCurrentGroup);
 
+				int groupNumber = 0;
+
 				foreach (var dataPkgGroup in lstDataPkgGroups)
 				{
+					groupNumber++;
+
 					var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
 					foreach (int dataPkgID in dataPkgGroup)
 					{
@@ -731,6 +760,7 @@ namespace DataPackage_Archive_Manager
 					}
 
 					// Pre-populate lstDataPackageInfoCache with the files for the current group
+					ReportMessage("Querying MyEMSL for group " + groupNumber + " of " + lstDataPkgGroups.Count + " (has " + dataPkgGroup.Count + " data packages)");
 					dataPackageInfoCache.RefreshInfo();
 
 					// Obtain the clsDataPackageInfo objects for the IDs in dataPkgGroup
@@ -825,24 +855,38 @@ namespace DataPackage_Archive_Manager
 					// Nothing to do
 					return true;
 				}
+			
+				// Check whether the MyEMSL Simple Search query returned results
+				// If it did not, either this is a new data package, or we had a query error
+				int archiveFileCountExisting = dataPackageInfoCache.FindFiles("*", "", dataPkgInfo.ID).Count();
+				if (archiveFileCountExisting == 0)
+				{
+					// Simple Search does not know about this data package (or the files reported by it were filtered out by the reader)
+					// See if DMS is tracking that this data package was, in fact, uploaded to DMS at some point in time
+					// This is tracked by table T_MyEMSL_Uploads, examining rows where ErrorCode is 0 and FileCountNew or FileCountUpdated are positive
+
+					if (dataPkgInfo.MyEMSLUploads > 0)
+					{
+						bool logToDB = !this.PreviewMode;
+
+						ReportMessage(
+							"Data package " + dataPkgInfo.ID +
+							" was previously uploaded to MyEMSL, yet Simple Search did not return any files for this dataset.  Skipping this data package to prevent the addition of duplicate files to MyEMSL",
+							clsLogTools.LogLevels.ERROR, logToDB);
+						return false;
+					}
+				}
+
 
 				if (this.PreviewMode)
 				{
-					if (lstUnmatchedFiles.Count == 0)
-					{
-						ReportMessage("All files for Data Package " + dataPkgInfo.ID + " are already up-to-date in the archive");
-					}
-					else
-					{
-						ReportMessage("Need to upload " + lstUnmatchedFiles.Count + " file(s) for Data Package " + dataPkgInfo.ID);
+					ReportMessage("Need to upload " + lstUnmatchedFiles.Count + " file(s) for Data Package " + dataPkgInfo.ID);
 
-						// Preview the changes
-						foreach (var unmatchedFile in lstUnmatchedFiles)
-						{
-							Console.WriteLine("  " + unmatchedFile.RelativeDestinationFullPath);
-						}
+					// Preview the changes
+					foreach (var unmatchedFile in lstUnmatchedFiles)
+					{
+						Console.WriteLine("  " + unmatchedFile.RelativeDestinationFullPath);
 					}
-
 				}
 				else
 				{

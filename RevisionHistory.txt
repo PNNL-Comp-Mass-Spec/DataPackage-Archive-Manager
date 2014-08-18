@@ -1,5 +1,10 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5343; August 18, 2014
+	- Now capping at 30 the number of data packages to include in each group
+	- Now skipping old files when computing SHA values (assuming the file sizes match)
+	- Now reporting an error if we determine a data package needs to be uploaded and it previously had files added to MyEMSL, yet now Simple Search reports no files tracked for the data package
+
 Version 1.0.5302; July 8, 2014
 	- Now checking for exceptions reported by MyEMSL when verifying successful uploads
 
