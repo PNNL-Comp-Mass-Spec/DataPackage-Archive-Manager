@@ -299,8 +299,8 @@ namespace DataPackage_Archive_Manager
 					subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length + 1));
 				}
 
-				// Look for this file in MyEMSL
-				var archiveFiles = dataPackageInfoCache.FindFiles(fiLocalFile.Name, subDir, dataPkgInfo.ID);
+				// Look for this file in MyEMSL				
+				var archiveFiles = dataPackageInfoCache.FindFiles(fiLocalFile.Name, subDir, dataPkgInfo.ID, recurse: false);
 
 				if (diDataPkg.Parent == null)
 					throw new DirectoryNotFoundException("Unable to determine the parent folder for directory " + diDataPkg.Name);
