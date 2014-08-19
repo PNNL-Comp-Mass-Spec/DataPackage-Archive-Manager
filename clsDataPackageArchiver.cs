@@ -307,6 +307,7 @@ namespace DataPackage_Archive_Manager
 
 				if (archiveFiles.Count == 0)
 				{
+					// File not found; add to lstDatasetFilesToArchive
 					lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
 					uploadInfo.FileCountNew++;
 					uploadInfo.Bytes += fiLocalFile.Length;
@@ -318,6 +319,7 @@ namespace DataPackage_Archive_Manager
 					// Compare file size
 					if (fiLocalFile.Length != archiveFile.FileInfo.FileSizeBytes)
 					{
+						// Sizes don't match; add to lstDatasetFilesToArchive
 						lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
 						uploadInfo.FileCountUpdated++;
 						uploadInfo.Bytes += fiLocalFile.Length;
@@ -338,6 +340,8 @@ namespace DataPackage_Archive_Manager
 
 							if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
 							{
+								// Hashes don't match; add to lstDatasetFilesToArchive
+								// We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
 								string relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.Directory.FullName, diDataPkg.Parent.FullName);
 
 								lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, relativeDestinationDirectory, sha1HashHex));
