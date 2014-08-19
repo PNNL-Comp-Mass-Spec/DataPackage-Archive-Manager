@@ -16,7 +16,7 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "July 8, 2014";
+		public const string PROGRAM_DATE = "August 18, 2014";
 
 		protected static string mDBConnectionString;
 		protected static clsLogTools.LogLevels mLogLevel;

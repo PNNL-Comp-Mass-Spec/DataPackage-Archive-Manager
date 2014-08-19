@@ -764,7 +764,7 @@ namespace DataPackage_Archive_Manager
 					}
 
 					// Pre-populate lstDataPackageInfoCache with the files for the current group
-					ReportMessage("Querying MyEMSL for group " + groupNumber + " of " + lstDataPkgGroups.Count + " (has " + dataPkgGroup.Count + " data packages)");
+					ReportMessage("Querying MyEMSL for " + dataPkgGroup.Count + " data packages in group " + groupNumber + " of " + lstDataPkgGroups.Count);
 					dataPackageInfoCache.RefreshInfo();
 
 					// Obtain the clsDataPackageInfo objects for the IDs in dataPkgGroup
