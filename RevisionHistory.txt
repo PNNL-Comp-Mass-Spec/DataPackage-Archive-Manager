@@ -1,5 +1,10 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5346; August 21, 2014
+	- Added a 6.75 day holdoff for replacing files that already exist in MyEMSL
+	- Now waiting 6.5 days prior to deleting an existing Metadata.txt file (for uploads that are not yet verified)
+		- Database warnings will be logged for existing Metadata.txt files that are at least 48 hours old
+
 Version 1.0.5343; August 18, 2014
 	- Now capping at 30 the number of data packages to include in each group
 	- Now skipping old files when computing SHA values (assuming the file sizes match)

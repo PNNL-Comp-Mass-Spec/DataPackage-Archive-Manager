@@ -167,7 +167,7 @@ namespace DataPackage_Archive_Manager
 			}
 
 			// Look for any Auto-process folders that have recently modified files
-			// These folders will be skipped until the files are at least 60 minutes old
+			// These folders will be skipped until the files are at least 4 hours old
 			// This list contains folder paths to skip
 			var lstDataPackageFoldersToSkip = new List<string>();
 
@@ -181,7 +181,7 @@ namespace DataPackage_Archive_Manager
 					bool skipFolder = false;
 					foreach (var file in dataPkgFolder.GetFiles("*.*", SearchOption.AllDirectories))
 					{
-						if (DateTime.UtcNow.Subtract(file.LastWriteTimeUtc).TotalHours < 1)
+						if (DateTime.UtcNow.Subtract(file.LastWriteTimeUtc).TotalHours < 4)
 						{
 							skipFolder = true;
 							break;
@@ -305,54 +305,8 @@ namespace DataPackage_Archive_Manager
 				if (diDataPkg.Parent == null)
 					throw new DirectoryNotFoundException("Unable to determine the parent folder for directory " + diDataPkg.Name);
 
-				if (archiveFiles.Count == 0)
-				{
-					// File not found; add to lstDatasetFilesToArchive
-					lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
-					uploadInfo.FileCountNew++;
-					uploadInfo.Bytes += fiLocalFile.Length;
-				}
-				else
-				{
-					var archiveFile = archiveFiles.First();
-
-					// Compare file size
-					if (fiLocalFile.Length != archiveFile.FileInfo.FileSizeBytes)
-					{
-						// Sizes don't match; add to lstDatasetFilesToArchive
-						lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
-						uploadInfo.FileCountUpdated++;
-						uploadInfo.Bytes += fiLocalFile.Length;
-					}
-					else
-					{
-						// File sizes match
-						// Compare Sha-1 hash if the file is less than 1 month old or
-						// if the file is less than 6 months old and less than 50 MB in size
-						
-						const int THRESHOLD_50_MB = 50 * 1024 * 1024;
-
-						if (fiLocalFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
-							fiLocalFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && fiLocalFile.Length < THRESHOLD_50_MB)
-						{
-							
-							string sha1HashHex = Utilities.GenerateSha1Hash(fiLocalFile.FullName);
-
-							if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
-							{
-								// Hashes don't match; add to lstDatasetFilesToArchive
-								// We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
-								string relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.Directory.FullName, diDataPkg.Parent.FullName);
-
-								lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, relativeDestinationDirectory, sha1HashHex));
-								uploadInfo.FileCountUpdated++;
-								uploadInfo.Bytes += fiLocalFile.Length;
-							}
-
-						}
-					}
-
-				}
+				// Possibly add the file to lstDatasetFilesToArchive
+				AddFileIfArchiveRequired(diDataPkg, ref uploadInfo, lstDatasetFilesToArchive, fiLocalFile, archiveFiles);
 
 				filesProcessed++;
 				if (DateTime.UtcNow.Subtract(dtLastProgressDetail).TotalSeconds >= 5)
@@ -380,6 +334,68 @@ namespace DataPackage_Archive_Manager
 			}
 
 			return lstDatasetFilesToArchive;
+		}
+
+		private static void AddFileIfArchiveRequired(
+			DirectoryInfo diDataPkg, 
+			ref udtMyEMSLUploadInfo uploadInfo,
+			List<FileInfoObject> lstDatasetFilesToArchive, 
+			FileInfo fiLocalFile, 
+			List<DatasetFolderOrFileInfo> archiveFiles)
+		{
+
+			if (archiveFiles.Count == 0)
+			{
+				// File not found; add to lstDatasetFilesToArchive
+				lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
+				uploadInfo.FileCountNew++;
+				uploadInfo.Bytes += fiLocalFile.Length;
+				return;
+			}
+
+			var archiveFile = archiveFiles.First();
+
+			// File already in MyEMSL
+			// Do not re-upload if it was stored in MyEMSL less than 6.75 days ago
+			if ((DateTime.UtcNow.Subtract(archiveFile.FileInfo.SubmissionTimeValue).TotalDays < 6.75))
+			{
+				return;
+			}
+
+			// Compare file size
+			if (fiLocalFile.Length != archiveFile.FileInfo.FileSizeBytes)
+			{
+				// Sizes don't match; add to lstDatasetFilesToArchive
+				lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
+				uploadInfo.FileCountUpdated++;
+				uploadInfo.Bytes += fiLocalFile.Length;
+				return;
+			}
+
+			// File sizes match
+			// Compare Sha-1 hash if the file is less than 1 month old or
+			// if the file is less than 6 months old and less than 50 MB in size
+
+			const int THRESHOLD_50_MB = 50 * 1024 * 1024;
+
+			if (fiLocalFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
+			    fiLocalFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && fiLocalFile.Length < THRESHOLD_50_MB)
+			{
+				string sha1HashHex = Utilities.GenerateSha1Hash(fiLocalFile.FullName);
+
+				if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
+				{
+					// Hashes don't match; add to lstDatasetFilesToArchive
+					// We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
+					string relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.Directory.FullName,
+					                                                                          diDataPkg.Parent.FullName);
+
+					lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, relativeDestinationDirectory, sha1HashHex));
+					uploadInfo.FileCountUpdated++;
+					uploadInfo.Bytes += fiLocalFile.Length;
+				}
+			}
+
 		}
 
 		protected DateTime GetDBDate(SqlDataReader reader, string columnName)
@@ -836,10 +852,22 @@ namespace DataPackage_Archive_Manager
 				var fiMetadataFile = new FileInfo(metadataFilePath);
 				if (fiMetadataFile.Exists)
 				{
-					if (DateTime.UtcNow.Subtract(fiMetadataFile.LastWriteTimeUtc).TotalHours > 48)
+					if (DateTime.UtcNow.Subtract(fiMetadataFile.LastWriteTimeUtc).TotalHours >= 48)
 					{
-						ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file over 48 hours old; deleting file: " + fiMetadataFile.FullName, true);
-						fiMetadataFile.Delete();
+						if (DateTime.UtcNow.Subtract(fiMetadataFile.LastWriteTimeUtc).TotalDays > 6.5)
+						{
+							ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file over 6.5 days old; deleting file: " + fiMetadataFile.FullName, true);
+							fiMetadataFile.Delete();
+						}
+						else
+						{
+							// This is likely an error, but we don't want to re-upload the files yet
+							// Log an error to the database
+							ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file between 2 and 6.5 days old: " + fiMetadataFile.FullName, true);
+
+							// This is not a fatal error; return true
+							return true;
+						}						
 					}
 					else
 					{
