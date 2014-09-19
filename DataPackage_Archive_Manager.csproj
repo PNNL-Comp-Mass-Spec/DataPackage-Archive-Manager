@@ -68,6 +68,7 @@
     <Compile Include="clsLogTools.cs" />
     <Compile Include="clsParseCommandLine.cs" />
     <Compile Include="clsDataPackageArchiver.cs" />
+    <Compile Include="clsWindowsUpdateStatus.cs" />
     <Compile Include="EventArgs.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

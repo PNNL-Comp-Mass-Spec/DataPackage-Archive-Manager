@@ -16,7 +16,7 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "August 21, 2014";
+		public const string PROGRAM_DATE = "September 19, 2014";
 
 		protected static string mDBConnectionString;
 		protected static clsLogTools.LogLevels mLogLevel;
@@ -58,50 +58,57 @@ namespace DataPackage_Archive_Manager
 					return -1;
 
 				}
-				else
+
+				string pendingWindowsUpdateMessage;
+				var updatesArePending = clsWindowsUpdateStatus.UpdatesArePending(out pendingWindowsUpdateMessage);
+
+				if (updatesArePending)
 				{
-					var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
-
-					// Attach the events
-					archiver.ErrorEvent += new MessageEventHandler(archiver_ErrorEvent);
-					archiver.MessageEvent += new MessageEventHandler(archiver_MessageEvent);
-
-					if (mVerifyOnly)
-					{
-						//Verify previously updated data
-						success = archiver.VerifyUploadStatus();
-					}
-					else
-					{
-						List<KeyValuePair<int, int>> lstDataPkgIDs;
-						if (mDataPkgIDList.StartsWith("*"))
-							// Process all Data Packages by passing an empty list to ParseDataPkgIDList
-							lstDataPkgIDs = new List<KeyValuePair<int, int>>();
-						else
-						{
-							// Parse the data package ID list
-							lstDataPkgIDs = archiver.ParseDataPkgIDList(mDataPkgIDList);
-
-							if (lstDataPkgIDs.Count == 0)
-							{
-								// Data Package IDs not defined							
-								ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
-								ShowProgramHelp();
-								return -2;
-							}
-						}
-
-						// Upload new data, then verify previously updated data
-						success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
-					}
-
-					if (!success)
-					{
-						ShowErrorMessage("Error archiving the data packages: " + archiver.ErrorMessage);
-						return -3;
-					}
+					Console.WriteLine(pendingWindowsUpdateMessage);
+					Console.WriteLine("Will not contact archive any data packages");
+					return 0;
 				}
 
+				var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
+
+				// Attach the events
+				archiver.ErrorEvent += new MessageEventHandler(archiver_ErrorEvent);
+				archiver.MessageEvent += new MessageEventHandler(archiver_MessageEvent);
+
+				if (mVerifyOnly)
+				{
+					//Verify previously updated data
+					success = archiver.VerifyUploadStatus();
+				}
+				else
+				{
+					List<KeyValuePair<int, int>> lstDataPkgIDs;
+					if (mDataPkgIDList.StartsWith("*"))
+						// Process all Data Packages by passing an empty list to ParseDataPkgIDList
+						lstDataPkgIDs = new List<KeyValuePair<int, int>>();
+					else
+					{
+						// Parse the data package ID list
+						lstDataPkgIDs = archiver.ParseDataPkgIDList(mDataPkgIDList);
+
+						if (lstDataPkgIDs.Count == 0)
+						{
+							// Data Package IDs not defined							
+							ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
+							ShowProgramHelp();
+							return -2;
+						}
+					}
+
+					// Upload new data, then verify previously updated data
+					success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
+				}
+
+				if (!success)
+				{
+					ShowErrorMessage("Error archiving the data packages: " + archiver.ErrorMessage);
+					return -3;
+				}
 			}
 			catch (Exception ex)
 			{
