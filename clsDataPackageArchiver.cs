@@ -162,7 +162,7 @@ namespace DataPackage_Archive_Manager
             if (lstDataPackageFilesAll.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                ReportMessage("Data package " + dataPkgInfo.ID + " does not have any files; nothing to archive", clsLogTools.LogLevels.DEBUG);
+                ReportMessage("Data Package " + dataPkgInfo.ID + " does not have any files; nothing to archive", clsLogTools.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
@@ -237,14 +237,14 @@ namespace DataPackage_Archive_Manager
 
             if (lstDataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
             {
-                ReportError(" Data package " + dataPkgInfo.ID + " has " + lstDataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count; see " + dataPkgInfo.SharePath, true);
+                ReportError(" Data Package " + dataPkgInfo.ID + " has " + lstDataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count; see " + dataPkgInfo.SharePath, true);
                 return new List<FileInfoObject>();
             }
 
             if (lstDataPackageFiles.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                string msg = " Data package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all have been skipped";
+                string msg = " Data Package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all have been skipped";
 
                 if (lstDataPackageFoldersToSkip.Count > 0)
                     msg += " due to recently modified files in auto-job result folders";
@@ -252,7 +252,7 @@ namespace DataPackage_Archive_Manager
                     msg += " since they are system or temporary files";
 
                 ReportMessage(msg + "; nothing to archive", clsLogTools.LogLevels.INFO);
-                ReportMessage("  Data package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
+                ReportMessage("  Data Package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
@@ -273,9 +273,9 @@ namespace DataPackage_Archive_Manager
                 string msg;
 
                 if (lstDataPackageFilesAll.Count == 1)
-                    msg = " Data package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
+                    msg = " Data Package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
                 else
-                    msg = " Data package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
+                    msg = " Data Package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
 
                 ReportMessage(msg + "; nothing to archive", clsLogTools.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
@@ -313,7 +313,7 @@ namespace DataPackage_Archive_Manager
                 {
                     dtLastProgressDetail = DateTime.UtcNow;
 
-                    string progressMessage = "Finding files to archive for data package " + dataPkgInfo.ID + ": " + filesProcessed + " / " + lstDataPackageFiles.Count;
+                    string progressMessage = "Finding files to archive for Data Package " + dataPkgInfo.ID + ": " + filesProcessed + " / " + lstDataPackageFiles.Count;
                     if (DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 30)
                     {
                         dtLastProgress = DateTime.UtcNow;
@@ -329,7 +329,7 @@ namespace DataPackage_Archive_Manager
             if (lstDatasetFilesToArchive.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                ReportMessage(" All files for data package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, clsLogTools.LogLevels.DEBUG);
+                ReportMessage(" All files for Data Package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, clsLogTools.LogLevels.DEBUG);
                 return lstDatasetFilesToArchive;
             }
 
@@ -806,7 +806,7 @@ namespace DataPackage_Archive_Manager
             if (successCount == lstDataPkgInfo.Count)
             {
                 if (successCount == 1)
-                    ReportMessage("Processing complete for data package " + lstDataPkgInfo.First().ID);
+                    ReportMessage("Processing complete for Data Package " + lstDataPkgInfo.First().ID);
                 else
                     ReportMessage("Processed " + successCount + " data packages");
 
@@ -817,7 +817,7 @@ namespace DataPackage_Archive_Manager
                 return true;
 
             if (lstDataPkgInfo.Count == 1)
-                ReportError("Failed to archive data package " + lstDataPkgIDs.First());
+                ReportError("Failed to archive Data Package " + lstDataPkgIDs.First());
             else if (successCount == 0)
                 ReportError("Failed to archive any of the " + lstDataPkgIDs.Count + " candidate data packages", true);
             else
@@ -1297,9 +1297,15 @@ namespace DataPackage_Archive_Manager
                     return eUploadStatus.VerificationError;
                 }
 
+                // Look for any steps in error
+                if (statusChecker.HasStepError(xmlServerResponse, out errorMessage))
+                {
+                    ReportError("Data package " + statusInfo.Value.DataPackageID + " has a step reporting an error" + "; " + errorMessage, true);
+                    Utilities.Logout(cookieJar);
+                    return eUploadStatus.VerificationError;
+                }
 
                 string statusMessage;
-
 
                 // First check step 5 (Available in MyEMSL)
 
@@ -1390,7 +1396,7 @@ namespace DataPackage_Archive_Manager
 
                 if (fiMetadataFile.Exists)
                 {
-                    string msg = "Deleting metadata file for Data Package " + statusInfo.Value.DataPackageID +
+                    string msg = "Deleting metadata file for Data package " + statusInfo.Value.DataPackageID +
                                  " since it is now available and verified: " + fiMetadataFile.FullName;
 
                     if (this.PreviewMode)
@@ -1411,7 +1417,7 @@ namespace DataPackage_Archive_Manager
                 if (exceptionCount < 3)
                 {
                     ReportMessage(
-                        "Exception verifying archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
+                        "Exception verifying archive status for Data package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
                         statusInfo.Value.EntryID + ": " + ex.Message, clsLogTools.LogLevels.WARN);
                 }
                 else
