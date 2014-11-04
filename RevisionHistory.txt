@@ -1,5 +1,9 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5420; November 3, 2014
+	- Now querying MyEMSL just once for each data package
+		- Previously queried separately for both Available and Archived
+
 Version 1.0.5346; August 21, 2014
 	- Added a 6.75 day holdoff for replacing files that already exist in MyEMSL
 	- Now waiting 6.5 days prior to deleting an existing Metadata.txt file (for uploads that are not yet verified)
