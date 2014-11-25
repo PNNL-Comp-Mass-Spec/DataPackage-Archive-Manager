@@ -1359,10 +1359,10 @@ namespace DataPackage_Archive_Manager
                                     clsLogTools.LogLevels.DEBUG);
                 }
 
-                if (!verified && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 48)
+                if (!verified && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 5*24)
                 {
                     ReportError(
-                        "Data package " + statusInfo.Value.DataPackageID + " has not been validated in the archive after 48 hours; see " +
+                        "Data package " + statusInfo.Value.DataPackageID + " has not been validated in the archive after 5 days; see " +
                         statusInfo.Value.StatusURI, true);
                 }
 

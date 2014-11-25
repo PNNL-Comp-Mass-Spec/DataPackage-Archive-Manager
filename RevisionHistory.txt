@@ -2,6 +2,7 @@ Data Package Archive Manager Change Log
 
 Version 1.0.5442; November 25, 2014
 	- New version of MyEMSLReader that starts with a 10 second timeout value
+	- Now warning about a data package not being validated in the archive after 6 days instead of after 2 days
 
 Version 1.0.5420; November 3, 2014
 	- Now querying MyEMSL just once for each data package
