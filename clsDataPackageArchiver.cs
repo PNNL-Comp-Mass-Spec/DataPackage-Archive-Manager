@@ -202,11 +202,23 @@ namespace DataPackage_Archive_Manager
 				".Rproj.user"
 			};
 
+            // Also filter out Thermo .raw files, mzML files, etc.
+            var lstExtensionsToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase)
+			{
+				".raw",
+				".mzXML",
+				".mzML"
+			};
+
             var lstDataPackageFiles = new List<FileInfo>();
             foreach (var dataPkgFile in lstDataPackageFilesAll)
             {
                 bool keep = true;
                 if (lstFilesToSkip.Contains(dataPkgFile.Name))
+                {
+                    keep = false;
+                }
+                else if (lstExtensionsToSkip.Contains(dataPkgFile.Extension))
                 {
                     keep = false;
                 }
@@ -219,16 +231,24 @@ namespace DataPackage_Archive_Manager
                 {
                     keep = false;
                 }
-
-                foreach (var dataPkgFolder in lstDataPackageFoldersToSkip)
+                else if (dataPkgFile.Name.ToLower().EndsWith(".mzml.gz"))
                 {
-                    if (dataPkgFile.Directory.FullName.StartsWith(dataPkgFolder))
-                    {
-                        keep = false;
-                        break;
-                    }
+                    keep = false;
                 }
 
+                var diDataPkgFileContainer = dataPkgFile.Directory;
+                if (keep && diDataPkgFileContainer != null)
+                {
+                    foreach (var dataPkgFolder in lstDataPackageFoldersToSkip)
+                    {
+                        if (diDataPkgFileContainer.FullName.StartsWith(dataPkgFolder))
+                        {
+                            keep = false;
+                            break;
+                        }
+                    }
+                }
+               
                 if (keep)
                     lstDataPackageFiles.Add(dataPkgFile);
 

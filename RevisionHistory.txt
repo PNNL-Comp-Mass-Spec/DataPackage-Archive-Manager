@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5578; April 10, 2015
+	- Now excluding files with extension .raw, .mzXML, .mzML, or .mzML.gz
+
 Version 1.0.5442; November 25, 2014
 	- New version of MyEMSLReader that starts with a 10 second timeout value
 	- Now warning about a data package not being validated in the archive after 6 days instead of after 2 days
