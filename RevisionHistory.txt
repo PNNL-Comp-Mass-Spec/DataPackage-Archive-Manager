@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5781; October 30, 2015
+	- Moved clsWindowsUpdateStatus into PRISM.dll 
+
 Version 1.0.5578; April 10, 2015
 	- Now excluding files with extension .raw, .mzXML, .mzML, or .mzML.gz
 

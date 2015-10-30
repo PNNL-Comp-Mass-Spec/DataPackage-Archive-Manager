@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using PRISM;
 
 namespace DataPackage_Archive_Manager
 {
@@ -16,7 +17,7 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "April 10, 2015";
+		public const string PROGRAM_DATE = "October 30, 2015";
 
 		protected static string mDBConnectionString;
 		protected static clsLogTools.LogLevels mLogLevel;
