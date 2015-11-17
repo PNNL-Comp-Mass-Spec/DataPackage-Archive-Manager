@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5798; November 16, 2015
+	- Now including the EUS ID of the data package owner in the metadata sent to MyEMSL
+
 Version 1.0.5781; October 30, 2015
 	- Moved clsWindowsUpdateStatus into PRISM.dll 
 

@@ -17,8 +17,11 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "October 30, 2015";
+		public const string PROGRAM_DATE = "November 16, 2015";
 
+        /// <summary>
+        /// Gigasax.DMS_Data_Package
+        /// </summary>
 		protected static string mDBConnectionString;
 		protected static clsLogTools.LogLevels mLogLevel;
 
