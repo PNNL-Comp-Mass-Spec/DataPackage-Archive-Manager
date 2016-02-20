@@ -963,7 +963,8 @@ namespace DataPackage_Archive_Manager
                     }
 
                     // Instantiate the metadata object
-                    var metadataObject = Upload.CreateMetadataObject(uploadMetadata, lstUnmatchedFiles);
+                    Upload.udtEUSInfo eusInfo;
+                    var metadataObject = Upload.CreateMetadataObject(uploadMetadata, lstUnmatchedFiles, out eusInfo);
                     string statusURL;
 
                     mMyEMSLUploader.TransferFolderPath = diDataPkg.Parent.FullName;

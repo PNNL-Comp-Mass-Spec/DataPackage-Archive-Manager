@@ -1,5 +1,9 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5893; February 19, 2016
+	- Update call to Upload.CreateMetadataObject() to include a new output parameter
+	- Updated DLLs
+
 Version 1.0.5798; November 16, 2015
 	- Now including the EUS ID of the data package owner in the metadata sent to MyEMSL
 
