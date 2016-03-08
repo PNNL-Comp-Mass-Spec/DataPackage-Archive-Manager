@@ -17,7 +17,7 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "February 19, 2016";
+		public const string PROGRAM_DATE = "March 8, 2016";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
