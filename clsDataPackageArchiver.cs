@@ -745,6 +745,7 @@ namespace DataPackage_Archive_Manager
                 var lstDataPkgGroups = new List<List<int>>();
                 var lstCurrentGroup = new List<int>();
                 var dtLastProgress = DateTime.UtcNow.AddSeconds(-10);
+                var dtLastSimpleSearchVerify = DateTime.MinValue;
 
                 var runningCount = 0;
 
@@ -799,6 +800,23 @@ namespace DataPackage_Archive_Manager
                         dataPackageInfoCache.AddDataPackage(dataPkgID);
                     }
 
+                    if (!this.PreviewMode && DateTime.UtcNow.Subtract(dtLastSimpleSearchVerify).TotalMinutes > 15)
+                    {
+                        // Verify that MyEMSL is returning expected results for data packages known to have been stored previously in MyEMSL
+                        // If no results are found, we will presume that MyEMSL is not available, or is available but is misconfigured (or has permissions issues)
+				        var success = VerifyKnownMyEMSLSearchResults();
+
+                        // Continue only if previewing the data or if known MyEMSL results were found
+                        // If known results were not found, we don't want to risk pushing 1000's of data package files into MyEMSL when those files likely are already stored in MyEMSL
+                        if (!success)
+                        {
+                            ReportMessage("Aborting processing of data packages since Simple Search is not available");
+                            return false;
+                        }
+
+                        dtLastSimpleSearchVerify = DateTime.UtcNow;
+
+                    }
                     // Pre-populate lstDataPackageInfoCache with the files for the current group
                     ReportMessage("Querying MyEMSL for " + dataPkgGroup.Count + " data packages in group " + groupNumber + " of " + lstDataPkgGroups.Count);
                     dataPackageInfoCache.RefreshInfo();
@@ -1150,7 +1168,13 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        protected bool UpdateMyEMSLUploadStatus(udtMyEMSLStatusInfo statusInfo, bool available, bool verified)
+        /// <summary>
+        /// Update values for Available and Verified in the Data_Package databse
+        /// </summary>
+        /// <param name="statusInfo"></param>
+        /// <param name="verified"></param>
+        /// <returns>Assumes that Available = true</returns>
+        protected bool UpdateMyEMSLUploadStatus(udtMyEMSLStatusInfo statusInfo, bool verified)
         {
 
             try
@@ -1173,7 +1197,7 @@ namespace DataPackage_Archive_Manager
 
                 cmd.Parameters.Add("@Available", System.Data.SqlDbType.TinyInt);
                 cmd.Parameters["@Available"].Direction = System.Data.ParameterDirection.Input;
-                cmd.Parameters["@Available"].Value = BoolToTinyInt(available);
+                cmd.Parameters["@Available"].Value = BoolToTinyInt(true);
 
                 cmd.Parameters.Add("@Verified", System.Data.SqlDbType.TinyInt);
                 cmd.Parameters["@Verified"].Direction = System.Data.ParameterDirection.Input;
@@ -1208,12 +1232,106 @@ namespace DataPackage_Archive_Manager
             }
         }
 
+        /// <summary>
+        /// Search MyEMSL for expected filenames for specific data packages
+        /// </summary>
+        /// <returns></returns>
+        public bool VerifyKnownMyEMSLSearchResults()
+        {
+
+            try
+            {
+                var dataPackageIDs = new Dictionary<int, List<string>>();
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 593,  new List<string> {"PX_Submission_2015-10-09_16-01.px"});
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 721,  new List<string> {"AScore_AnalysisSummary.txt", "JobParameters_995425.xml", "T_Filtered_Results.txt"});
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1034, new List<string> {"MasterWorkflowSyn.xml", "T_Reporter_Ions_Typed.txt"});
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1376, new List<string> {"Concatenated_msgfdb_syn_plus_ascore.txt", "AScore_CID_0.5Da_ETD_0.5Da_HCD_0.05Da.xml"});
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1512, new List<string> {"AScore_CID_0.5Da_ETD_0.5Da_HCD_0.05Da.xml", "Job_to_Dataset_Map.txt"});
+
+                var dataPackageListInfo = new DataPackageListInfo();
+
+                // Lookup the files tracked by MyEMSL for data packages created between 2012 and 2016
+                foreach (var dataPkg in dataPackageIDs)
+                {
+                    dataPackageListInfo.AddDataPackage(dataPkg.Key);
+                }
+                
+                var archiveFiles = dataPackageListInfo.FindFiles("*");
+
+                if (archiveFiles.Count == 0)
+                {
+                    ReportError("MyEMSL did not return any files for the known data packages (" + dataPackageIDs.First() + "-" + dataPackageIDs.Last() + "); " +
+                                "the Simple Search service must be disabled or broken at present.", true);                    
+                    return false;
+                }
+
+                var dataPkgMissingFiles = new Dictionary<int, List<string>>();
+ 
+                // Check for known files from each of the data packages
+                foreach (var dataPkg in dataPackageIDs)
+                {
+                    var foundFiles = (from item in archiveFiles where item.FileInfo.DataPackageID == dataPkg.Key select item.FileInfo).ToList();
+
+                    var missingFiles = new List<string>();
+
+                    foreach (var fileName in dataPkg.Value)
+                    {
+                        var fileMatch = (from item in foundFiles where string.Equals(item.Filename, fileName) select item).ToList();
+
+                        if (fileMatch.Count < 1)
+                        {
+                            missingFiles.Add(fileName);
+                        }
+                    }
+
+                    if (missingFiles.Count > 0)
+                        dataPkgMissingFiles.Add(dataPkg.Key, missingFiles);
+                }
+
+                if (dataPkgMissingFiles.Count <= 0)
+                {
+                    return true;
+                }
+
+                if (dataPkgMissingFiles.Count == dataPackageIDs.Count)
+                {
+                    ReportError("MyEMSL did not return the expected files for any of the data packages; some search results were returned but none of the expected files were found", true);
+                    return false;
+                }
+
+                var msg =
+                    "MyEMSL did not return all of the expected files for the known data packages; " +
+                    "some search results were returned but files were missing for data packages: " + string.Join(", ", dataPkgMissingFiles.Keys);
+
+                ReportError(msg, true);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                ReportError("Exception verifying known MyEMSL search results: " + ex.Message, true);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Add a new data package ID and list of expected filenames to the dataPackageIDs dictionary
+        /// </summary>
+        /// <param name="dataPackageIDs"></param>
+        /// <param name="dataPkgID"></param>
+        /// <param name="fileNames"></param>
+        private void VerifyKnownResultsAddExpectedFiles(Dictionary<int, List<string>> dataPackageIDs, int dataPkgID, List<string> fileNames)
+        {
+            dataPackageIDs.Add(dataPkgID, fileNames);
+        }
+
+        /// <summary>
+        /// Query the database to find the status URIs that need to be verified
+        /// Verify each one, updating the database as appropriate (if PreviewMode=false)
+        /// Post an error to the DB if data has not been ingested within 24 hours or verified within 48 hours (and PreviewMode=false)
+        /// </summary>
+        /// <returns></returns>
         public bool VerifyUploadStatus()
         {
-            // Query the database to find the status URIs that need to be verified
-            // Verify each one, updating the database as appropriate (if PreviewMode=false)
-
-            // Post an error to the DB if data has not been ingested within 24 hours or verified within 48 hours (and PreviewMode=false)
 
             // First obtain a list of status URIs to check
             // Keys are StatusNum integers, values are StatusURI strings
@@ -1231,57 +1349,79 @@ namespace DataPackage_Archive_Manager
             var auth = new Auth(new Uri(authURL));
 
             CookieContainer cookieJar;
-            if (!auth.GetAuthCookies(out cookieJar))
+
+            try
             {
-                var msg = "Auto-login to " + Configuration.TestAuthUri + " failed authentication";
-                ReportError(msg);
+                if (!auth.GetAuthCookies(out cookieJar))
+                {
+                    var msg = "Auto-login to " + Configuration.TestAuthUri + " failed authentication";
+                    ReportError(msg);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                ReportError("Exception logging in to " + Configuration.TestAuthUri + " (VerifyUploadStatus): " + ex.Message, true);
                 return false;
             }
 
-            // Confirm that the data packages are visible in Elastic Search
-            // To avoid obtaining too many results from MyEMSL, process the data packages in dctURIs in groups, 5 at a time
-            // First construct a unique list of the Data Package IDs in dctURIs
-
-            var distinctDataPackageIDs = (from item in dctURIs select item.Value.DataPackageID).Distinct().ToList();
-            const int DATA_PACKAGE_GROUP_SIZE = 5;
-
-            var statusChecker = new MyEMSLStatusCheck();
-
-            for (var i = 0; i < distinctDataPackageIDs.Count; i += DATA_PACKAGE_GROUP_SIZE)
+            try
             {
-                var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
-                var dctURIsInGroup = new Dictionary<int, udtMyEMSLStatusInfo>();
 
-                for (var j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
+                // Confirm that the data packages are visible in Elastic Search
+                // To avoid obtaining too many results from MyEMSL, process the data packages in dctURIs in groups, 5 at a time
+                // First construct a unique list of the Data Package IDs in dctURIs
+
+                var distinctDataPackageIDs = (from item in dctURIs select item.Value.DataPackageID).Distinct().ToList();
+                const int DATA_PACKAGE_GROUP_SIZE = 5;
+
+                var statusChecker = new MyEMSLStatusCheck();
+
+                for (var i = 0; i < distinctDataPackageIDs.Count; i += DATA_PACKAGE_GROUP_SIZE)
                 {
-                    if (j >= distinctDataPackageIDs.Count)
-                        break;
+                    var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
+                    var dctURIsInGroup = new Dictionary<int, udtMyEMSLStatusInfo>();
 
-                    var currentDataPackageID = distinctDataPackageIDs[j];
-                    dataPackageInfoCache.AddDataPackage(currentDataPackageID);
+                    for (var j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
+                    {
+                        if (j >= distinctDataPackageIDs.Count)
+                            break;
 
-                    // Find all of the URIs for this data package					
-                    foreach (var uriItem in (from item in dctURIs where item.Value.DataPackageID == currentDataPackageID select item))
-                        dctURIsInGroup.Add(uriItem.Key, uriItem.Value);
+                        var currentDataPackageID = distinctDataPackageIDs[j];
+                        dataPackageInfoCache.AddDataPackage(currentDataPackageID);
 
+                        // Find all of the URIs for this data package					
+                        foreach (
+                            var uriItem in
+                                (from item in dctURIs where item.Value.DataPackageID == currentDataPackageID select item)
+                            )
+                            dctURIsInGroup.Add(uriItem.Key, uriItem.Value);
+
+                    }
+
+                    // Prepopulate lstDataPackageInfoCache with the files for the current group
+                    dataPackageInfoCache.RefreshInfo();
+
+                    foreach (var statusInfo in dctURIsInGroup)
+                    {
+                        var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, cookieJar, dataPackageInfoCache);
+
+                        if (eResult == eUploadStatus.CriticalError)
+                            return false;
+                    }
                 }
 
-                // Prepopulate lstDataPackageInfoCache with the files for the current group
-                dataPackageInfoCache.RefreshInfo();
 
-                foreach (var statusInfo in dctURIsInGroup)
-                {
-                    var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, cookieJar, dataPackageInfoCache);
-
-                    if (eResult == eUploadStatus.CriticalError)
-                        return false;
-                }
+                Utilities.Logout(cookieJar);
+                return true;
             }
-
-            Utilities.Logout(cookieJar);
-
-            return true;
-
+            catch (Exception ex)
+            {
+                ReportError("Exception verifying data package upload status (VerifyUploadStatus): " + ex.Message, true);
+                Utilities.Logout(cookieJar);
+                return false;
+            }
+            
         }
 
         private eUploadStatus VerifyUploadStatusWork(
@@ -1397,7 +1537,7 @@ namespace DataPackage_Archive_Manager
 
 
                 // Update values in the DB
-                UpdateMyEMSLUploadStatus(statusInfo.Value, available, verified);
+                UpdateMyEMSLUploadStatus(statusInfo.Value, verified);
 
                 if (!verified)
                 {

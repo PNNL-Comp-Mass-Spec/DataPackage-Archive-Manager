@@ -17,7 +17,7 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "March 8, 2016";
+		public const string PROGRAM_DATE = "March 9, 2016";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -45,7 +45,7 @@ namespace DataPackage_Archive_Manager
 
 			try
 			{
-				bool success = false;
+				var success = false;
 
 				if (objParseCommandLine.ParseCommandLine())
 				{
@@ -76,8 +76,8 @@ namespace DataPackage_Archive_Manager
 				var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
 
 				// Attach the events
-				archiver.ErrorEvent += new MessageEventHandler(archiver_ErrorEvent);
-				archiver.MessageEvent += new MessageEventHandler(archiver_MessageEvent);
+				archiver.ErrorEvent += archiver_ErrorEvent;
+				archiver.MessageEvent += archiver_MessageEvent;
 
 				if (mVerifyOnly)
 				{
@@ -104,8 +104,9 @@ namespace DataPackage_Archive_Manager
 						}
 					}
 
-					// Upload new data, then verify previously updated data
-					success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
+                    // Upload new data, then verify previously updated data
+                    success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
+				    
 				}
 
 				if (!success)
@@ -126,7 +127,7 @@ namespace DataPackage_Archive_Manager
 
 		private static string GetAppVersion()
 		{
-			return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString() + " (" + PROGRAM_DATE + ")";
+			return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
 		}
 
 		private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
@@ -140,7 +141,7 @@ namespace DataPackage_Archive_Manager
 				if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
 				{
 					var badArguments = new List<string>();
-					foreach (string item in objParseCommandLine.InvalidParameters(lstValidParameters))
+					foreach (var item in objParseCommandLine.InvalidParameters(lstValidParameters))
 					{
 						badArguments.Add("/" + item);
 					}
@@ -227,14 +228,13 @@ namespace DataPackage_Archive_Manager
 		private static void ShowErrorMessage(string strTitle, IEnumerable<string> items)
 		{
 			const string strSeparator = "------------------------------------------------------------------------------";
-			string strMessage = null;
 
-			Console.WriteLine();
+		    Console.WriteLine();
 			Console.WriteLine(strSeparator);
 			Console.WriteLine(strTitle);
-			strMessage = strTitle + ":";
+			var strMessage = strTitle + ":";
 
-			foreach (string item in items)
+			foreach (var item in items)
 			{
 				Console.WriteLine("   " + item);
 				strMessage += " " + item;
@@ -248,7 +248,7 @@ namespace DataPackage_Archive_Manager
 
 		private static void ShowProgramHelp()
 		{
-			string exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+			var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
 			try
 			{

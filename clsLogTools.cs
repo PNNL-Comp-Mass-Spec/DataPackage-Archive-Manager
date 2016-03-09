@@ -13,9 +13,9 @@ using System.Globalization;
 using log4net;
 using System.Data;
 
-// Configure log4net using the .log4net file
 using log4net.Appender;
 
+// This assembly attribute tells Log4Net where to find the config file
 [assembly: log4net.Config.XmlConfigurator(ConfigFile = "Logging.config", Watch = true)]
 
 namespace DataPackage_Archive_Manager
@@ -25,6 +25,12 @@ namespace DataPackage_Archive_Manager
         //*********************************************************************************************************
         // Wraps Log4Net functions
         //**********************************************************************************************************
+
+        #region "Contants"
+
+        private const string LOG_FILE_APPENDER = "FileAppender";
+
+        #endregion
 
         #region "Enums"
         public enum LogLevels
@@ -49,14 +55,36 @@ namespace DataPackage_Archive_Manager
         private static readonly ILog m_DbLogger = LogManager.GetLogger("DbLogger");
         private static readonly ILog m_SysLogger = LogManager.GetLogger("SysLogger");
         private static readonly ILog m_FtpFileLogger = LogManager.GetLogger("FtpFileLogger");
+
         private static string m_FileDate;
         private static string m_BaseFileName;
         private static FileAppender m_FileAppender;
+		
         private static RollingFileAppender m_FtpLogFileAppender;
         private static bool m_FtpLogEnabled;
         #endregion
 
         #region "Properties"
+
+        /// <summary>
+        /// File path for the current log file used by the FileAppender
+        /// </summary>
+        public static string CurrentFileAppenderPath 
+        {
+            get
+            {
+                if (m_FileAppender == null || string.IsNullOrEmpty(m_FileAppender.File))
+                    return string.Empty;
+
+                return m_FileAppender.File;
+            }
+        }
+
+        /// <summary>
+        /// Tells calling program file debug status
+        /// </summary>
+        /// <returns>TRUE if debug level enabled for file logger; FALSE otherwise</returns>
+        /// <remarks></remarks>
         public static bool FileLogDebugEnabled
         {
             get { return m_FileLogger.IsDebugEnabled; }
@@ -64,114 +92,110 @@ namespace DataPackage_Archive_Manager
         #endregion
 
         #region "Methods"
+
         /// <summary>
         /// Writes a message to the logging system
         /// </summary>
-        /// <param name="LoggerType">Type of logger to use</param>
-        /// <param name="LogLevel">Level of log reporting</param>
-        /// <param name="InpMsg">Message to be logged</param>
-        public static void WriteLog(LoggerTypes LoggerType, LogLevels LogLevel, string InpMsg)
+        /// <param name="loggerType">Type of logger to use</param>
+        /// <param name="logLevel">Level of log reporting</param>
+        /// <param name="message">Message to be logged</param>
+        public static void WriteLog(LoggerTypes loggerType, LogLevels logLevel, string message)
         {
-            ILog MyLogger;
-
-            //Establish which logger will be used
-            switch (LoggerType)
-            {
-                case LoggerTypes.LogDb:
-                    MyLogger = m_DbLogger;
-                    break;
-                case LoggerTypes.LogFile:
-                    MyLogger = m_FileLogger;
-                    // Check to determine if a new file should be started
-                    string TestFileDate = DateTime.Now.ToString("MM-dd-yyyy");
-                    if (TestFileDate != m_FileDate)
-                    {
-                        m_FileDate = TestFileDate;
-                        ChangeLogFileName();
-                    }
-                    break;
-                case LoggerTypes.LogSystem:
-                    MyLogger = m_SysLogger;
-                    break;
-                default:
-                    throw new Exception("Invalid logger type specified");
-            }
-
-            //Send the log message
-            switch (LogLevel)
-            {
-                case LogLevels.DEBUG:
-                    if (MyLogger.IsDebugEnabled) MyLogger.Debug(InpMsg);
-                    break;
-                case LogLevels.ERROR:
-                    if (MyLogger.IsErrorEnabled) MyLogger.Error(InpMsg);
-                    break;
-                case LogLevels.FATAL:
-                    if (MyLogger.IsFatalEnabled) MyLogger.Fatal(InpMsg);
-                    break;
-                case LogLevels.INFO:
-                    if (MyLogger.IsInfoEnabled) MyLogger.Info(InpMsg);
-                    break;
-                case LogLevels.WARN:
-                    if (MyLogger.IsWarnEnabled) MyLogger.Warn(InpMsg);
-                    break;
-                default:
-                    throw new Exception("Invalid log level specified");
-            }
+            WriteLogWork(loggerType, logLevel, message, null);
         }
 
         /// <summary>
         /// Overload to write a message and exception to the logging system
         /// </summary>
-        /// <param name="LoggerType">Type of logger to use</param>
-        /// <param name="LogLevel">Level of log reporting</param>
-        /// <param name="InpMsg">Message to be logged</param>
-        /// <param name="Ex">Exception to be logged</param>
-        public static void WriteLog(LoggerTypes LoggerType, LogLevels LogLevel, string InpMsg, Exception Ex)
+        /// <param name="loggerType">Type of logger to use</param>
+        /// <param name="logLevel">Level of log reporting</param>
+        /// <param name="message">Message to be logged</param>
+        /// <param name="ex">Exception to be logged</param>
+        public static void WriteLog(LoggerTypes loggerType, LogLevels logLevel, string message, Exception ex)
         {
-            ILog MyLogger;
+            WriteLogWork(loggerType, logLevel, message, ex);
+        }
 
-            //Establish which logger will be used
-            switch (LoggerType)
+        /// <summary>
+        /// Write a message and possibly an exception to the logging system
+        /// </summary>
+        /// <param name="loggerType">Type of logger to use</param>
+        /// <param name="logLevel">Level of log reporting</param>
+        /// <param name="message">Message to be logged</param>
+        /// <param name="ex">Exception to be logged; null if no exception</param>
+        private static void WriteLogWork(LoggerTypes loggerType, LogLevels logLevel, string message, Exception ex)
+        {
+            ILog myLogger;
+
+            // Establish which logger will be used
+            switch (loggerType)
             {
                 case LoggerTypes.LogDb:
-                    MyLogger = m_DbLogger;
+                    myLogger = m_DbLogger;
                     break;
                 case LoggerTypes.LogFile:
-                    MyLogger = m_FileLogger;
+                    myLogger = m_FileLogger;
                     // Check to determine if a new file should be started
-                    string TestFileDate = DateTime.Now.ToString("MM-dd-yyyy");
-                    if (TestFileDate != m_FileDate)
+                    var testFileDate = DateTime.Now.ToString("MM-dd-yyyy");
+                    if (!string.Equals(testFileDate, m_FileDate))
                     {
-                        m_FileDate = TestFileDate;
+                        m_FileDate = testFileDate;
                         ChangeLogFileName();
                     }
                     break;
                 case LoggerTypes.LogSystem:
-                    MyLogger = m_SysLogger;
+                    myLogger = m_SysLogger;
                     break;
                 default:
                     throw new Exception("Invalid logger type specified");
             }
 
-
             //Send the log message
-            switch (LogLevel)
+            switch (logLevel)
             {
                 case LogLevels.DEBUG:
-                    if (MyLogger.IsDebugEnabled) MyLogger.Debug(InpMsg, Ex);
+                    if (myLogger.IsDebugEnabled) {
+                        if (ex == null) 
+                            myLogger.Debug(message);
+                        else 
+                            myLogger.Debug(message, ex);
+                    }                    
                     break;
                 case LogLevels.ERROR:
-                    if (MyLogger.IsErrorEnabled) MyLogger.Error(InpMsg, Ex);
+                    if (myLogger.IsErrorEnabled)
+                    {
+                        if (ex == null)
+                            myLogger.Error(message);
+                        else
+                            myLogger.Error(message, ex);
+                    }                    
                     break;
                 case LogLevels.FATAL:
-                    if (MyLogger.IsFatalEnabled) MyLogger.Fatal(InpMsg, Ex);
+                    if (myLogger.IsFatalEnabled)
+                    {
+                        if (ex == null)
+                            myLogger.Fatal(message);
+                        else
+                            myLogger.Fatal(message, ex);
+                    }                    
                     break;
                 case LogLevels.INFO:
-                    if (MyLogger.IsInfoEnabled) MyLogger.Info(InpMsg, Ex);
+                    if (myLogger.IsInfoEnabled)
+                    {
+                        if (ex == null)
+                            myLogger.Info(message);
+                        else
+                            myLogger.Info(message, ex);
+                    }                    
                     break;
                 case LogLevels.WARN:
-                    if (MyLogger.IsWarnEnabled) MyLogger.Warn(InpMsg, Ex);
+                    if (myLogger.IsWarnEnabled)
+                    {
+                        if (ex == null)
+                            myLogger.Warn(message);
+                        else
+                            myLogger.Warn(message, ex);
+                    }                    
                     break;
                 default:
                     throw new Exception("Invalid log level specified");
@@ -181,12 +205,12 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Writes an FTP transaction message to the FTP logger
         /// </summary>
-        /// <param name="inpMsg">Message to log</param>
-        public static void WriteFtpLog(string inpMsg)
+        /// <param name="message">Message to log</param>
+        public static void WriteFtpLog(string message)
         {
             if (!m_FtpLogEnabled) return;
 
-            if (m_FtpFileLogger.IsDebugEnabled) m_FtpFileLogger.Debug(inpMsg);
+            if (m_FtpFileLogger.IsDebugEnabled) m_FtpFileLogger.Debug(message);
         }
 
         /// <summary>
@@ -195,17 +219,17 @@ namespace DataPackage_Archive_Manager
         public static void ChangeLogFileName()
         {
             //Get a list of appenders
-            IEnumerable<IAppender> AppendList = FindAppenders("FileAppender");
-            if (AppendList == null)
+            var appendList = FindAppenders(LOG_FILE_APPENDER);
+            if (appendList == null)
             {
                 WriteLog(LoggerTypes.LogSystem, LogLevels.WARN, "Unable to change file name. No appender found");
                 return;
             }
 
-            foreach (IAppender SelectedAppender in AppendList)
+            foreach (var selectedAppender in appendList)
             {
                 //Convert the IAppender object to a FileAppender
-                var AppenderToChange = SelectedAppender as FileAppender;
+                var AppenderToChange = selectedAppender as FileAppender;
                 if (AppenderToChange == null)
                 {
                     WriteLog(LoggerTypes.LogSystem, LogLevels.ERROR, "Unable to convert appender");
@@ -220,21 +244,21 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Gets the specified appender
         /// </summary>
-        /// <param name="AppendName">Name of appender to find</param>
+        /// <param name="appenderName">Name of appender to find</param>
         /// <returns>List(IAppender) objects if found; NULL otherwise</returns>
-        private static IEnumerable<IAppender> FindAppenders(string AppendName)
+        private static IEnumerable<IAppender> FindAppenders(string appenderName)
         {
             //Get a list of the current loggers
-            ILog[] LoggerList = LogManager.GetCurrentLoggers();
-            if (LoggerList.GetLength(0) < 1) return null;
+            var loggerList = LogManager.GetCurrentLoggers();
+            if (loggerList.GetLength(0) < 1) return null;
 
             //Create a List of appenders matching the criteria for each logger
             var retList = new List<IAppender>();
-            foreach (ILog testLogger in LoggerList)
+            foreach (var testLogger in loggerList)
             {
-                foreach (IAppender testAppender in testLogger.Logger.Repository.GetAppenders())
+                foreach (var testAppender in testLogger.Logger.Repository.GetAppenders())
                 {
-                    if (testAppender.Name == AppendName) retList.Add(testAppender);
+                    if (testAppender.Name == appenderName) retList.Add(testAppender);
                 }
             }
 
@@ -250,48 +274,48 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Sets the file logging level via an integer value (Overloaded)
         /// </summary>
-        /// <param name="InpLevel">"InpLevel">Integer corresponding to level (1-5, 5 being most verbose)</param>
-        public static void SetFileLogLevel(int InpLevel)
+        /// <param name="logLevel">Integer corresponding to level (1-5, 5 being most verbose)</param>
+        public static void SetFileLogLevel(int logLevel)
         {
-            Type LogLevelEnumType = typeof(LogLevels);
+            var logLevelEnumType = typeof(LogLevels);
 
             //Verify input level is a valid log level
-            if (!Enum.IsDefined(LogLevelEnumType, InpLevel))
+            if (!Enum.IsDefined(logLevelEnumType, logLevel))
             {
-                WriteLog(LoggerTypes.LogFile, LogLevels.ERROR, "Invalid value specified for level: " + InpLevel);
+                WriteLog(LoggerTypes.LogFile, LogLevels.ERROR, "Invalid value specified for level: " + logLevel);
                 return;
             }
 
             //Convert input integer into the associated enum
-            var Lvl = (LogLevels)Enum.Parse(LogLevelEnumType, InpLevel.ToString(CultureInfo.InvariantCulture));
+            var logLevelEnum = (LogLevels)Enum.Parse(logLevelEnumType, logLevel.ToString(CultureInfo.InvariantCulture));
 
-            SetFileLogLevel(Lvl);
+            SetFileLogLevel(logLevelEnum);
         }
 
         /// <summary>
         /// Sets file logging level based on enumeration (Overloaded)
         /// </summary>
-        /// <param name="InpLevel">LogLevels value defining level (Debug is most verbose)</param>
-        public static void SetFileLogLevel(LogLevels InpLevel)
+        /// <param name="logLevel">LogLevels value defining level (Debug is most verbose)</param>
+        public static void SetFileLogLevel(LogLevels logLevel)
         {
-            var LogRepo = (log4net.Repository.Hierarchy.Logger)m_FileLogger.Logger;
+            var logger = (log4net.Repository.Hierarchy.Logger)m_FileLogger.Logger;
 
-            switch (InpLevel)
+            switch (logLevel)
             {
                 case LogLevels.DEBUG:
-                    LogRepo.Level = LogRepo.Hierarchy.LevelMap["DEBUG"];
+                    logger.Level = logger.Hierarchy.LevelMap["DEBUG"];
                     break;
                 case LogLevels.ERROR:
-                    LogRepo.Level = LogRepo.Hierarchy.LevelMap["ERROR"];
+                    logger.Level = logger.Hierarchy.LevelMap["ERROR"];
                     break;
                 case LogLevels.FATAL:
-                    LogRepo.Level = LogRepo.Hierarchy.LevelMap["FATAL"];
+                    logger.Level = logger.Hierarchy.LevelMap["FATAL"];
                     break;
                 case LogLevels.INFO:
-                    LogRepo.Level = LogRepo.Hierarchy.LevelMap["INFO"];
+                    logger.Level = logger.Hierarchy.LevelMap["INFO"];
                     break;
                 case LogLevels.WARN:
-                    LogRepo.Level = LogRepo.Hierarchy.LevelMap["WARN"];
+                    logger.Level = logger.Hierarchy.LevelMap["WARN"];
                     break;
             }
         }
@@ -299,12 +323,12 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Creates a file appender
         /// </summary>
-        /// <param name="LogfileName">Log file name for the appender to use</param>
+        /// <param name="logfileName">Log file name for the appender to use</param>
         /// <returns>A configured file appender</returns>
-        private static FileAppender CreateFileAppender(string LogfileName)
+        private static FileAppender CreateFileAppender(string logfileName)
         {
             m_FileDate = DateTime.Now.ToString("MM-dd-yyyy");
-            m_BaseFileName = LogfileName;
+            m_BaseFileName = logfileName;
 
             var layout = new log4net.Layout.PatternLayout
             {
@@ -314,7 +338,7 @@ namespace DataPackage_Archive_Manager
 
             var returnAppender = new FileAppender
             {
-                Name = "FileAppender",
+                Name = LOG_FILE_APPENDER,
                 File = m_BaseFileName + "_" + m_FileDate + ".txt",
                 AppendToFile = true,
                 Layout = layout
@@ -356,24 +380,24 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Configures the file logger
         /// </summary>
-        /// <param name="LogFileName">Base name for log file</param>
-        /// <param name="LogLevel">Debug level for file logger</param>
-        public static void CreateFileLogger(string LogFileName, int LogLevel)
+        /// <param name="logFileName">Base name for log file</param>
+        /// <param name="logLevel">Debug level for file logger</param>
+        public static void CreateFileLogger(string logFileName, int logLevel)
         {
             var curLogger = (log4net.Repository.Hierarchy.Logger)m_FileLogger.Logger;
-            m_FileAppender = CreateFileAppender(LogFileName);
+            m_FileAppender = CreateFileAppender(logFileName);
             curLogger.AddAppender(m_FileAppender);
-            SetFileLogLevel(LogLevel);
+            SetFileLogLevel(logLevel);
         }
 
         /// <summary>
         /// Configures the file logger
         /// </summary>
-        /// <param name="LogFileName">Base name for log file</param>
-        /// <param name="LogLevel">Debug level for file logger</param>
-        public static void CreateFileLogger(string LogFileName, LogLevels LogLevel)
+        /// <param name="logFileName">Base name for log file</param>
+        /// <param name="logLevel">Debug level for file logger</param>
+        public static void CreateFileLogger(string logFileName, LogLevels logLevel)
         {
-            CreateFileLogger(LogFileName, (int)LogLevel);
+            CreateFileLogger(logFileName, (int)logLevel);
         }
 
         /// <summary>
@@ -394,32 +418,53 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Configures the Db logger
         /// </summary>
-        /// <param name="ConnStr">Database connection string</param>
-        /// <param name="ModuleName">Module name used by logger</param>
-        public static void CreateDbLogger(string ConnStr, string ModuleName)
+        /// <param name="connStr">Database connection string</param>
+        /// <param name="moduleName">Module name used by logger</param>
+        public static void CreateDbLogger(string connStr, string moduleName)
         {
             var curLogger = (log4net.Repository.Hierarchy.Logger)m_DbLogger.Logger;
             curLogger.Level = log4net.Core.Level.Info;
-            curLogger.AddAppender(CreateDbAppender(ConnStr, ModuleName));
-            curLogger.AddAppender(m_FileAppender);
+
+            curLogger.AddAppender(CreateDbAppender(connStr, moduleName, "DbAppender"));
+
+            if (m_FileAppender == null)
+            {
+                return;
+            }
+
+            var addFileAppender = true;
+            foreach (var appender in curLogger.Appenders)
+            {
+                if (appender == m_FileAppender)
+                {
+                    addFileAppender = false;
+                    break;
+                }
+            }
+
+            if (addFileAppender)
+            {
+                curLogger.AddAppender(m_FileAppender);
+            }
         }
 
         /// <summary>
         /// Creates a database appender
         /// </summary>
-        /// <param name="ConnStr">Database connection string</param>
-        /// <param name="ModuleName">Module name used by logger</param>
+        /// <param name="connectionString">Database connection string</param>
+        /// <param name="moduleName">Module name used by logger</param>
+        /// <param name="appenderName">Appender name</param>
         /// <returns>ADONet database appender</returns>
-        public static AdoNetAppender CreateDbAppender(string ConnStr, string ModuleName)
+        public static AdoNetAppender CreateDbAppender(string connectionString, string moduleName, string appenderName)
         {
             var returnAppender = new AdoNetAppender
             {
                 BufferSize = 1,
-                ConnectionType =
-                    "System.Data.SqlClient.SqlConnection, System.Data, Version=1.0.3300.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
-                ConnectionString = ConnStr,
+                ConnectionType = "System.Data.SqlClient.SqlConnection, System.Data, Version=1.0.3300.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+                ConnectionString = connectionString,
                 CommandType = CommandType.StoredProcedure,
-                CommandText = "PostLogEntry"
+                CommandText = "PostLogEntry",
+                Name = appenderName
             };
 
             //Type parameter
@@ -448,7 +493,7 @@ namespace DataPackage_Archive_Manager
                 ParameterName = "@postedBy",
                 DbType = DbType.String,
                 Size = 128,
-                Layout = CreateLayout(ModuleName)
+                Layout = CreateLayout(moduleName)
             };
             returnAppender.AddParameter(postByParam);
 
@@ -460,14 +505,14 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Creates a layout object for a Db appender parameter
         /// </summary>
-        /// <param name="LayoutStr">Name of parameter</param>
+        /// <param name="layoutStr">Name of parameter</param>
         /// <returns></returns>
-        private static log4net.Layout.IRawLayout CreateLayout(string LayoutStr)
+        private static log4net.Layout.IRawLayout CreateLayout(string layoutStr)
         {
             var layoutConvert = new log4net.Layout.RawLayoutConverter();
             var returnLayout = new log4net.Layout.PatternLayout
             {
-                ConversionPattern = LayoutStr
+                ConversionPattern = layoutStr
             };
             returnLayout.ActivateOptions();
             

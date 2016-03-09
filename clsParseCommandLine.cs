@@ -14,7 +14,7 @@ using ExtensionMethods;
 // Website: http://panomics.pnnl.gov/ or http://www.sysbio.org/resources/staff/
 // -------------------------------------------------------------------------------
 // 
-// Last modified October 17, 2013
+// Last modified October 23, 2015
 
 namespace FileProcessor
 {
@@ -27,12 +27,12 @@ namespace FileProcessor
 		public const char ALTERNATE_SWITCH_CHAR = '-';
 
 		public const char DEFAULT_SWITCH_PARAM_CHAR = ':';
-		protected Dictionary<string, string> mSwitches = new Dictionary<string, string>();
+		protected readonly Dictionary<string, string> mSwitches = new Dictionary<string, string>();
 
-		protected List<string> mNonSwitchParameters = new List<string>();
-		protected bool mShowHelp = false;
+		protected readonly List<string> mNonSwitchParameters = new List<string>();
+		protected bool mShowHelp;
 
-		protected bool mDebugMode = false;
+		protected bool mDebugMode;
 		public bool NeedToShowHelp
 		{
 			get { return mShowHelp; }
@@ -82,7 +82,7 @@ namespace FileProcessor
 		/// <param name="strParameterList">Parameter list</param>
 		/// <param name="blnCaseSensitive">True to perform case-sensitive matching of the parameter name</param>
 		/// <returns>True if any of the parameters are not present in strParameterList()</returns>
-		public bool InvalidParametersPresent(string[] strParameterList, bool blnCaseSensitive)
+		public bool InvalidParametersPresent(IEnumerable<string> strParameterList, bool blnCaseSensitive)
 		{
 			if (InvalidParameters(strParameterList.ToList()).Count > 0)
 			{
@@ -122,14 +122,18 @@ namespace FileProcessor
 			try {
 				// Find items in mSwitches whose keys are not in lstValidParameters)		
 
-				foreach (KeyValuePair<string, string> item in mSwitches) {
-					string itemKey = item.Key;
+				foreach (var item in mSwitches) {
+					var itemKey = item.Key;
 					int intMatchCount;
 
 					if (blnCaseSensitive) {
-						intMatchCount = (from validItem in lstValidParameters where validItem == itemKey select validItem).Count();
+						intMatchCount = (from validItem in lstValidParameters 
+                                         where validItem == itemKey 
+                                         select validItem).Count();
 					} else {
-						intMatchCount = (from validItem in lstValidParameters where validItem.ToUpper() == itemKey.ToUpper() select validItem).Count();
+						intMatchCount = (from validItem in lstValidParameters 
+                                         where string.Equals(validItem, itemKey, StringComparison.CurrentCultureIgnoreCase) 
+                                         select validItem).Count();
 					}
 
 					if (intMatchCount == 0) {
@@ -250,7 +254,7 @@ namespace FileProcessor
 					Console.WriteLine();
 				}
 
-				string[] strParameters = SplitCommandLineParams(strCmdLine);
+				var strParameters = SplitCommandLineParams(strCmdLine);
 
 				if (mDebugMode)
 				{
@@ -262,7 +266,8 @@ namespace FileProcessor
 					return false;
 				}
 				
-				if (strCmdLine.IndexOf(chSwitchStartChar + "?") > 0 | strCmdLine.ToLower().IndexOf(chSwitchStartChar + "help") > 0)
+				if (strCmdLine.IndexOf(chSwitchStartChar + "?", StringComparison.Ordinal) > 0 || 
+                    strCmdLine.ToLower().IndexOf(chSwitchStartChar + "help", StringComparison.CurrentCultureIgnoreCase) > 0)
 				{
 					mShowHelp = true;
 					return false;
@@ -274,73 +279,74 @@ namespace FileProcessor
 				int intIndex;
 				for (intIndex = 1; intIndex <= strParameters.Length - 1; intIndex++)
 				{
-					if (strParameters[intIndex].Length > 0)
-					{
-						string strKey = strParameters[intIndex].TrimStart(' ');
-						string strValue = string.Empty;
+				    if (strParameters[intIndex].Length <= 0)
+				    {
+				        continue;
+				    }
 
-						bool blnSwitchParam;
-						if (strKey.StartsWith(chSwitchStartChar))
-						{
-							blnSwitchParam = true;
-						}
-						else if (strKey.StartsWith(ALTERNATE_SWITCH_CHAR) || strKey.StartsWith(DEFAULT_SWITCH_CHAR))
-						{
-							blnSwitchParam = true;
-						}
-						else
-						{
-							// Parameter doesn't start with strSwitchStartChar or / or -
-							blnSwitchParam = false;
-						}
+				    var strKey = strParameters[intIndex].TrimStart(' ');
+				    var strValue = string.Empty;
 
-						if (blnSwitchParam)
-						{
-							// Look for strSwitchParameterChar in strParameters(intIndex)
-							int intCharLoc = strParameters[intIndex].IndexOf(chSwitchParameterChar);
+				    bool blnSwitchParam;
+				    if (strKey.StartsWith(chSwitchStartChar))
+				    {
+				        blnSwitchParam = true;
+				    }
+				    else if (strKey.StartsWith(ALTERNATE_SWITCH_CHAR) || strKey.StartsWith(DEFAULT_SWITCH_CHAR))
+				    {
+				        blnSwitchParam = true;
+				    }
+				    else
+				    {
+				        // Parameter doesn't start with strSwitchStartChar or / or -
+				        blnSwitchParam = false;
+				    }
 
-							if (intCharLoc >= 0)
-							{
-								// Parameter is of the form /I:MyParam or /I:"My Parameter" or -I:"My Parameter" or /MyParam:Setting
-								strValue = strKey.Substring(intCharLoc + 1).Trim();
+				    if (blnSwitchParam)
+				    {
+				        // Look for strSwitchParameterChar in strParameters(intIndex)
+				        var intCharLoc = strParameters[intIndex].IndexOf(chSwitchParameterChar);
 
-								// Remove any starting and ending quotation marks
-								strValue = strValue.Trim('"');
+				        if (intCharLoc >= 0)
+				        {
+				            // Parameter is of the form /I:MyParam or /I:"My Parameter" or -I:"My Parameter" or /MyParam:Setting
+				            strValue = strKey.Substring(intCharLoc + 1).Trim();
 
-								strKey = strKey.Substring(0, intCharLoc);
-							}
-							else
-							{
-								// Parameter is of the form /S or -S
-							}
+				            // Remove any starting and ending quotation marks
+				            strValue = strValue.Trim('"');
 
-							// Remove the switch character from strKey
-							strKey = strKey.Substring(1).Trim();
+				            strKey = strKey.Substring(0, intCharLoc);
+				        }
+				        else
+				        {
+				            // Parameter is of the form /S or -S
+				        }
 
-							if (mDebugMode)
-							{
-								Console.WriteLine(@"SwitchParam: " + strKey + @"=" + strValue);
-							}
+				        // Remove the switch character from strKey
+				        strKey = strKey.Substring(1).Trim();
 
-							// Note: .Item() will add strKey if it doesn't exist (which is normally the case)
-							mSwitches[strKey] = strValue;
-						}
-						else
-						{
-							// Non-switch parameter since strSwitchParameterChar was not found and does not start with strSwitchStartChar
+				        if (mDebugMode)
+				        {
+				            Console.WriteLine(@"SwitchParam: " + strKey + @"=" + strValue);
+				        }
 
-							// Remove any starting and ending quotation marks
-							strKey = strKey.Trim('"');
+				        // Note: This will add strKey if it doesn't exist (which is normally the case)
+				        mSwitches[strKey] = strValue;
+				    }
+				    else
+				    {
+				        // Non-switch parameter since strSwitchParameterChar was not found and does not start with strSwitchStartChar
 
-							if (mDebugMode)
-							{
-								Console.WriteLine(@"NonSwitchParam " + mNonSwitchParameters.Count + @": " + strKey);
-							}
+				        // Remove any starting and ending quotation marks
+				        strKey = strKey.Trim('"');
 
-							mNonSwitchParameters.Add(strKey);
-						}
+				        if (mDebugMode)
+				        {
+				            Console.WriteLine(@"NonSwitchParam " + mNonSwitchParameters.Count + @": " + strKey);
+				        }
 
-					}
+				        mNonSwitchParameters.Add(strKey);
+				    }
 				}
 
 			}
@@ -361,11 +367,8 @@ namespace FileProcessor
 			{
 				return true;
 			}
-			else
-			{
-				return false;
-			}
-
+		    
+            return false;
 		}
 
 
@@ -389,7 +392,7 @@ namespace FileProcessor
 				intTotalIterations = 1;
 			}
 
-			int intIteration = 0;
+			var intIteration = 0;
 			do
 			{
 				Console.Write('.');
@@ -410,16 +413,16 @@ namespace FileProcessor
 		/// <returns>The value of the parameter at the given index; empty string if no value or invalid index</returns>
 		public string RetrieveNonSwitchParameter(int intParameterIndex)
 		{
-			string strValue = string.Empty;
+			var strValue = string.Empty;
 
 			if (intParameterIndex < mNonSwitchParameters.Count)
 			{
 				strValue = mNonSwitchParameters[intParameterIndex];
 			}
 
-			if (strValue == null)
+			if (string.IsNullOrEmpty(strValue))
 			{
-				strValue = string.Empty;
+				return string.Empty;
 			}
 
 			return strValue;
@@ -442,9 +445,9 @@ namespace FileProcessor
 
 				if (intParameterIndex < mSwitches.Count)
 				{
-					Dictionary<string, string>.Enumerator iEnum = mSwitches.GetEnumerator();
+					var iEnum = mSwitches.GetEnumerator();
 
-					int intIndex = 0;
+					var intIndex = 0;
 					while (iEnum.MoveNext())
 					{
 						if (intIndex == intParameterIndex)
@@ -497,30 +500,26 @@ namespace FileProcessor
 
 				if (blnCaseSensitive)
 				{
-					if (mSwitches.ContainsKey(strKey))
+				    if (mSwitches.ContainsKey(strKey))
 					{
 						strValue = Convert.ToString(mSwitches[strKey]);
 						return true;
 					}
-					else
-					{
-						return false;
-					}
+				    
+                    return false;
 				}
-				else
-				{
-					Dictionary<string, string>.Enumerator iEnum = mSwitches.GetEnumerator();
 
-					while (iEnum.MoveNext())
-					{
-						if (iEnum.Current.Key.ToUpper() == strKey.ToUpper())
-						{
-							strValue = iEnum.Current.Value;
-							return true;
-						}
-					}
-					return false;
-				}
+                var result = (from item in mSwitches
+                              where string.Equals(item.Key, strKey, StringComparison.CurrentCultureIgnoreCase)
+                              select item).ToList();
+			    
+                if (result.Count > 0)
+			    {
+			        strValue = result.First().Value;
+			        return true;
+			    }
+
+			    return false;
 			}
 			catch (System.Exception ex)
 			{
@@ -533,15 +532,19 @@ namespace FileProcessor
 		{
 			var strParameters = new List<string>();
 
-			int intIndexStart = 0;
-			int intIndexEnd = 0;
+			var intIndexStart = 0;
+			var intIndexEnd = 0;
 
 			try
 			{
 
 				if (!string.IsNullOrEmpty(strCmdLine))
 				{
-					bool blnInsideDoubleQuotes = false;
+					// Make sure the command line doesn't have any carriage return or linefeed characters
+					strCmdLine = strCmdLine.Replace("\r", " ");
+					strCmdLine = strCmdLine.Replace("\n", " ");					
+				
+					var blnInsideDoubleQuotes = false;
 
 					while (intIndexStart < strCmdLine.Length)
 					{
@@ -558,7 +561,7 @@ namespace FileProcessor
 							if (strCmdLine[intIndexEnd] == ' ' || intIndexEnd == strCmdLine.Length - 1)
 							{
 								// Found the end of a parameter
-								string strParameter = strCmdLine.Substring(intIndexStart, intIndexEnd - intIndexStart + 1).TrimEnd(' ');
+								var strParameter = strCmdLine.Substring(intIndexStart, intIndexEnd - intIndexStart + 1).TrimEnd(' ');
 
 								if (strParameter.StartsWith('"'))
 								{

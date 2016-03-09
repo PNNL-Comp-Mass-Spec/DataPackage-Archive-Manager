@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5912; March 9, 2016
+	- Now verifying that MyEMSL Simple Search is working by confirming that it returns expected results for a sampling of data packages
+
 Version 1.0.5893; February 19, 2016
 	- Update call to Upload.CreateMetadataObject() to include a new output parameter
 	- Updated DLLs
