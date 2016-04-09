@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5942; April 8, 2016
+	- Write an exception stack trace to the log
+
 Version 1.0.5912; March 9, 2016
 	- Now verifying that MyEMSL Simple Search is working by confirming that it returns expected results for a sampling of data packages
 

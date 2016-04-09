@@ -632,6 +632,10 @@ namespace DataPackage_Archive_Manager
             catch (Exception ex)
             {
                 ReportError("Error in LookupDataPkgInfo: " + ex.Message, true);
+
+                // Include the stack trace in the log
+                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, "Detail for error in LookupDataPkgInfo", ex);
+
                 return new List<clsDataPackageInfo>();
             }
 
@@ -838,6 +842,10 @@ namespace DataPackage_Archive_Manager
             catch (Exception ex)
             {
                 ReportError("Error in ProcessDataPackages: " + ex.Message, true);
+
+                // Include the stack trace in the log
+                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, "Detail for error in ProcessDataPackages", ex);
+
                 return false;
             }
 
@@ -1022,6 +1030,9 @@ namespace DataPackage_Archive_Manager
             catch (Exception ex)
             {
                 ReportError("Error in ProcessOneDataPackage processing Data Package " + dataPkgInfo.ID + ": " + ex.Message, true);
+
+                // Include the stack trace in the log
+                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, "Detail for error in ProcessOneDataPackage for Data Package " + dataPkgInfo.ID, ex);
 
                 uploadInfo.ErrorCode = ex.Message.GetHashCode();
                 if (uploadInfo.ErrorCode == 0)
