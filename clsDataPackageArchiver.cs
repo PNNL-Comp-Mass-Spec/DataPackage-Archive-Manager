@@ -18,10 +18,10 @@ namespace DataPackage_Archive_Manager
 
         public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;";
 
-        protected const string SP_NAME_STORE_MYEMSL_STATS = "StoreMyEMSLUploadStats";
-        protected const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "SetMyEMSLUploadStatus";
+        private const string SP_NAME_STORE_MYEMSL_STATS = "StoreMyEMSLUploadStats";
+        private const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "SetMyEMSLUploadStatus";
 
-        protected enum eUploadStatus
+        private enum eUploadStatus
         {
             Success = 0,
             VerificationError = 1,
@@ -36,12 +36,12 @@ namespace DataPackage_Archive_Manager
         ///   this a maximum cap on the number of files that will be stored in MyEMSL for a given data package
         /// If a data package has more than 600 files, then zip up groups of files before archiving to MyEMSL
         /// </remarks>
-        protected const int MAX_FILES_TO_ARCHIVE = 600;
+        private const int MAX_FILES_TO_ARCHIVE = 600;
 
         #endregion
 
         #region "Structures"
-        protected struct udtMyEMSLStatusInfo
+        private struct udtMyEMSLStatusInfo
         {
             public int EntryID;
             public int DataPackageID;
@@ -52,7 +52,7 @@ namespace DataPackage_Archive_Manager
             public string LocalPath;
         }
 
-        protected struct udtMyEMSLUploadInfo
+        private struct udtMyEMSLUploadInfo
         {
             public string SubDir;
             public int FileCountNew;
@@ -78,9 +78,9 @@ namespace DataPackage_Archive_Manager
 
         #region "Class variables"
 
-        protected PRISM.DataBase.clsExecuteDatabaseSP m_ExecuteSP;
-        protected Upload mMyEMSLUploader;
-        protected DateTime mLastStatusUpdate;
+        private PRISM.DataBase.clsExecuteDatabaseSP m_ExecuteSP;
+        private Upload mMyEMSLUploader;
+        private DateTime mLastStatusUpdate;
 
         #endregion
 
@@ -123,7 +123,7 @@ namespace DataPackage_Archive_Manager
             Initialize();
         }
 
-        protected short BoolToTinyInt(bool value)
+        private short BoolToTinyInt(bool value)
         {
             if (value)
                 return 1;
@@ -132,7 +132,7 @@ namespace DataPackage_Archive_Manager
         }
 
 
-        protected int CountFilesForDataPackage(clsDataPackageInfo dataPkgInfo)
+        private int CountFilesForDataPackage(clsDataPackageInfo dataPkgInfo)
         {
             var diDataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
             if (!diDataPkg.Exists)
@@ -145,7 +145,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        protected List<FileInfoObject> FindDataPackageFilesToArchive(
+        private List<FileInfoObject> FindDataPackageFilesToArchive(
             clsDataPackageInfo dataPkgInfo,
             DirectoryInfo diDataPkg,
             DateTime dateThreshold,
@@ -415,7 +415,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        protected DateTime GetDBDate(SqlDataReader reader, string columnName)
+        private DateTime GetDBDate(SqlDataReader reader, string columnName)
         {
             var value = reader[columnName];
 
@@ -426,7 +426,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        protected int GetDBInt(SqlDataReader reader, string columnName)
+        private int GetDBInt(SqlDataReader reader, string columnName)
         {
             var value = reader[columnName];
 
@@ -437,7 +437,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        protected string GetDBString(SqlDataReader reader, string columnName)
+        private string GetDBString(SqlDataReader reader, string columnName)
         {
             var value = reader[columnName];
 
@@ -448,7 +448,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        protected IEnumerable<clsDataPackageInfo> GetFilteredDataPackageInfoList(IEnumerable<clsDataPackageInfo> lstDataPkgInfo, IEnumerable<int> dataPkgGroup)
+        private IEnumerable<clsDataPackageInfo> GetFilteredDataPackageInfoList(IEnumerable<clsDataPackageInfo> lstDataPkgInfo, IEnumerable<int> dataPkgGroup)
         {
             var lstFilteredDataPkgInfo =
                 (from item in lstDataPkgInfo
@@ -458,7 +458,7 @@ namespace DataPackage_Archive_Manager
             return lstFilteredDataPkgInfo;
         }
 
-        protected Dictionary<int, udtMyEMSLStatusInfo> GetStatusURIs(int retryCount)
+        private Dictionary<int, udtMyEMSLStatusInfo> GetStatusURIs(int retryCount)
         {
             var dctURIs = new Dictionary<int, udtMyEMSLStatusInfo>();
 
@@ -535,7 +535,7 @@ namespace DataPackage_Archive_Manager
             return dctURIs;
         }
 
-        protected void Initialize()
+        private void Initialize()
         {
             this.ErrorMessage = string.Empty;
             this.mLastStatusUpdate = DateTime.UtcNow;
@@ -565,7 +565,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        protected List<clsDataPackageInfo> LookupDataPkgInfo(List<KeyValuePair<int, int>> lstDataPkgIDs)
+        private List<clsDataPackageInfo> LookupDataPkgInfo(List<KeyValuePair<int, int>> lstDataPkgIDs)
         {
             var lstDataPkgInfo = new List<clsDataPackageInfo>();
 
@@ -872,7 +872,7 @@ namespace DataPackage_Archive_Manager
             return false;
         }
 
-        protected bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, DateTime dateThreshold, MyEMSLReader.DataPackageListInfo dataPackageInfoCache)
+        private bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, DateTime dateThreshold, MyEMSLReader.DataPackageListInfo dataPackageInfoCache)
         {
             var success = false;
             var uploadInfo = new udtMyEMSLUploadInfo();
@@ -1047,17 +1047,17 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        protected void ReportMessage(string message)
+        private void ReportMessage(string message)
         {
             ReportMessage(message, clsLogTools.LogLevels.INFO, logToDB: false);
         }
 
-        protected void ReportMessage(string message, clsLogTools.LogLevels logLevel)
+        private void ReportMessage(string message, clsLogTools.LogLevels logLevel)
         {
             ReportMessage(message, logLevel, logToDB: false);
         }
 
-        protected void ReportMessage(string message, clsLogTools.LogLevels logLevel, bool logToDB)
+        private void ReportMessage(string message, clsLogTools.LogLevels logLevel, bool logToDB)
         {
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, logLevel, message);
 
@@ -1067,12 +1067,12 @@ namespace DataPackage_Archive_Manager
             OnMessage(new MessageEventArgs(message));
         }
 
-        protected void ReportError(string message)
+        private void ReportError(string message)
         {
             ReportError(message, false);
         }
 
-        protected void ReportError(string message, bool logToDB)
+        private void ReportError(string message, bool logToDB)
         {
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, message);
 
@@ -1107,7 +1107,7 @@ namespace DataPackage_Archive_Manager
             return success;
         }
 
-        protected bool StoreMyEMSLUploadStats(clsDataPackageInfo dataPkgInfo, udtMyEMSLUploadInfo uploadInfo)
+        private bool StoreMyEMSLUploadStats(clsDataPackageInfo dataPkgInfo, udtMyEMSLUploadInfo uploadInfo)
         {
 
             try
@@ -1185,7 +1185,7 @@ namespace DataPackage_Archive_Manager
         /// <param name="statusInfo"></param>
         /// <param name="verified"></param>
         /// <returns>Assumes that Available = true</returns>
-        protected bool UpdateMyEMSLUploadStatus(udtMyEMSLStatusInfo statusInfo, bool verified)
+        private bool UpdateMyEMSLUploadStatus(udtMyEMSLStatusInfo statusInfo, bool verified)
         {
 
             try
