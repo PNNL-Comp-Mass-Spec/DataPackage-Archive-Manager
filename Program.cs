@@ -17,19 +17,19 @@ namespace DataPackage_Archive_Manager
 	internal class Program
 	{
 
-		public const string PROGRAM_DATE = "April 8, 2016";
+		public const string PROGRAM_DATE = "April 12, 2016";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
         /// </summary>
-		protected static string mDBConnectionString;
-		protected static clsLogTools.LogLevels mLogLevel;
+		private static string mDBConnectionString;
+		private static clsLogTools.LogLevels mLogLevel;
 
-		protected static string mDataPkgIDList;
-		protected static DateTime mDateThreshold;
+		private static string mDataPkgIDList;
+		private static DateTime mDateThreshold;
 
-		protected static bool mPreviewMode;
-		protected static bool mVerifyOnly;
+		private static bool mPreviewMode;
+		private static bool mVerifyOnly;
 
 		public static int Main(string[] args)
 		{

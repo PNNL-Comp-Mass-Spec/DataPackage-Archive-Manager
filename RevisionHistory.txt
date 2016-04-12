@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5946; April 12, 2016
+	- Updated MyEMSLReader that escapes symbols reserved by RegEx
+
 Version 1.0.5942; April 8, 2016
 	- Write an exception stack trace to the log
 
