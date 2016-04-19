@@ -46,7 +46,7 @@
       <HintPath>Lib\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MyEMSLReader, Version=1.1.5946.28025, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="MyEMSLReader, Version=1.1.5946.29362, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Lib\MyEMSLReader.dll</HintPath>
     </Reference>

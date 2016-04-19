@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.5953; April 19, 2016
+	- Fix Simple Search service availability warning message
+
 Version 1.0.5946; April 12, 2016
 	- Updated MyEMSLReader that escapes symbols reserved by RegEx
 

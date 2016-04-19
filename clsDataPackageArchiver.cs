@@ -1252,6 +1252,7 @@ namespace DataPackage_Archive_Manager
 
             try
             {
+                // Keys in this dictionary are data package IDs.  Values are some of the expected filenames that MyEMSL should return
                 var dataPackageIDs = new Dictionary<int, List<string>>();
                 VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 593,  new List<string> {"PX_Submission_2015-10-09_16-01.px"});
                 VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 721,  new List<string> {"AScore_AnalysisSummary.txt", "JobParameters_995425.xml", "T_Filtered_Results.txt"});
@@ -1271,7 +1272,7 @@ namespace DataPackage_Archive_Manager
 
                 if (archiveFiles.Count == 0)
                 {
-                    ReportError("MyEMSL did not return any files for the known data packages (" + dataPackageIDs.First() + "-" + dataPackageIDs.Last() + "); " +
+                    ReportError("MyEMSL did not return any files for the known data packages (" + dataPackageIDs.First().Key + "-" + dataPackageIDs.Last().Key + "); " +
                                 "the Simple Search service must be disabled or broken at present.", true);                    
                     return false;
                 }
