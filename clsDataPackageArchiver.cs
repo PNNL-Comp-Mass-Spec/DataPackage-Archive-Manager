@@ -1062,7 +1062,7 @@ namespace DataPackage_Archive_Manager
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, logLevel, message);
 
             if (logToDB)
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, logLevel, message);
+                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, logLevel, message.Trim());
 
             OnMessage(new MessageEventArgs(message));
         }
@@ -1077,7 +1077,7 @@ namespace DataPackage_Archive_Manager
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, message);
 
             if (logToDB)
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, clsLogTools.LogLevels.ERROR, message);
+                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, clsLogTools.LogLevels.ERROR, message.Trim());
 
             OnErrorMessage(new MessageEventArgs(message));
 
