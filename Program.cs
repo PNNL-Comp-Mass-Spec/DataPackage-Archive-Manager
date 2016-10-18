@@ -4,337 +4,337 @@ using PRISM;
 
 namespace DataPackage_Archive_Manager
 {
-	// This program uploads new/changed data package files to MyEMSL
-	//
-	// -------------------------------------------------------------------------------
-	// Written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
-	//
-	// E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com
-	// Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/
-	// -------------------------------------------------------------------------------
-	// 
+    // This program uploads new/changed data package files to MyEMSL
+    //
+    // -------------------------------------------------------------------------------
+    // Written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
+    //
+    // E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com
+    // Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/
+    // -------------------------------------------------------------------------------
+    // 
 
-	internal class Program
-	{
+    internal class Program
+    {
 
-		public const string PROGRAM_DATE = "May 10, 2016";
+        public const string PROGRAM_DATE = "May 10, 2016";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
         /// </summary>
-		private static string mDBConnectionString;
-		private static clsLogTools.LogLevels mLogLevel;
+        private static string mDBConnectionString;
+        private static clsLogTools.LogLevels mLogLevel;
 
-		private static string mDataPkgIDList;
-		private static DateTime mDateThreshold;
+        private static string mDataPkgIDList;
+        private static DateTime mDateThreshold;
 
-		private static bool mPreviewMode;
-		private static bool mVerifyOnly;
+        private static bool mPreviewMode;
+        private static bool mVerifyOnly;
 
-		public static int Main(string[] args)
-		{
-			var objParseCommandLine = new FileProcessor.clsParseCommandLine();
+        public static int Main(string[] args)
+        {
+            var objParseCommandLine = new FileProcessor.clsParseCommandLine();
 
-			mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
-			mLogLevel = clsLogTools.LogLevels.INFO;
+            mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
+            mLogLevel = clsLogTools.LogLevels.INFO;
 
-			mDataPkgIDList = string.Empty;
-			mDateThreshold = DateTime.MinValue;
-			mPreviewMode = false;
-			mVerifyOnly = false;
+            mDataPkgIDList = string.Empty;
+            mDateThreshold = DateTime.MinValue;
+            mPreviewMode = false;
+            mVerifyOnly = false;
 
-			try
-			{
-				var success = false;
+            try
+            {
+                var success = false;
 
-				if (objParseCommandLine.ParseCommandLine())
-				{
-					if (SetOptionsUsingCommandLineParameters(objParseCommandLine))
-						success = true;
-				}
+                if (objParseCommandLine.ParseCommandLine())
+                {
+                    if (SetOptionsUsingCommandLineParameters(objParseCommandLine))
+                        success = true;
+                }
 
-				if (!success ||
-					objParseCommandLine.NeedToShowHelp ||
-					objParseCommandLine.ParameterCount + objParseCommandLine.NonSwitchParameterCount == 0 ||
-					mDataPkgIDList.Length == 0)
-				{
-					ShowProgramHelp();
-					return -1;
+                if (!success ||
+                    objParseCommandLine.NeedToShowHelp ||
+                    objParseCommandLine.ParameterCount + objParseCommandLine.NonSwitchParameterCount == 0 ||
+                    mDataPkgIDList.Length == 0)
+                {
+                    ShowProgramHelp();
+                    return -1;
 
-				}
+                }
 
-				string pendingWindowsUpdateMessage;
-				var updatesArePending = clsWindowsUpdateStatus.UpdatesArePending(out pendingWindowsUpdateMessage);
+                string pendingWindowsUpdateMessage;
+                var updatesArePending = clsWindowsUpdateStatus.UpdatesArePending(out pendingWindowsUpdateMessage);
 
-				if (updatesArePending)
-				{
-					Console.WriteLine(pendingWindowsUpdateMessage);
-					Console.WriteLine("Will not contact archive any data packages");
-					return 0;
-				}
+                if (updatesArePending)
+                {
+                    Console.WriteLine(pendingWindowsUpdateMessage);
+                    Console.WriteLine("Will not contact archive any data packages");
+                    return 0;
+                }
 
-				var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
+                var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
 
-				// Attach the events
-				archiver.ErrorEvent += archiver_ErrorEvent;
-				archiver.MessageEvent += archiver_MessageEvent;
+                // Attach the events
+                archiver.ErrorEvent += archiver_ErrorEvent;
+                archiver.MessageEvent += archiver_MessageEvent;
 
-				if (mVerifyOnly)
-				{
-					//Verify previously updated data
-					success = archiver.VerifyUploadStatus();
-				}
-				else
-				{
-					List<KeyValuePair<int, int>> lstDataPkgIDs;
-					if (mDataPkgIDList.StartsWith("*"))
-						// Process all Data Packages by passing an empty list to ParseDataPkgIDList
-						lstDataPkgIDs = new List<KeyValuePair<int, int>>();
-					else
-					{
-						// Parse the data package ID list
-						lstDataPkgIDs = archiver.ParseDataPkgIDList(mDataPkgIDList);
+                if (mVerifyOnly)
+                {
+                    //Verify previously updated data
+                    success = archiver.VerifyUploadStatus();
+                }
+                else
+                {
+                    List<KeyValuePair<int, int>> lstDataPkgIDs;
+                    if (mDataPkgIDList.StartsWith("*"))
+                        // Process all Data Packages by passing an empty list to ParseDataPkgIDList
+                        lstDataPkgIDs = new List<KeyValuePair<int, int>>();
+                    else
+                    {
+                        // Parse the data package ID list
+                        lstDataPkgIDs = archiver.ParseDataPkgIDList(mDataPkgIDList);
 
-						if (lstDataPkgIDs.Count == 0)
-						{
-							// Data Package IDs not defined							
-							ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
-							ShowProgramHelp();
-							return -2;
-						}
-					}
+                        if (lstDataPkgIDs.Count == 0)
+                        {
+                            // Data Package IDs not defined							
+                            ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
+                            ShowProgramHelp();
+                            return -2;
+                        }
+                    }
 
                     // Upload new data, then verify previously updated data
                     success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
-				    
-				}
+                    
+                }
 
-				if (!success)
-				{
-					ShowErrorMessage("Error archiving the data packages: " + archiver.ErrorMessage);
-					return -3;
-				}
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("Error occurred in Program->Main: " + Environment.NewLine + ex.Message);
-				Console.WriteLine(ex.StackTrace);
-				return -1;
-			}
+                if (!success)
+                {
+                    ShowErrorMessage("Error archiving the data packages: " + archiver.ErrorMessage);
+                    return -3;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error occurred in Program->Main: " + Environment.NewLine + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                return -1;
+            }
 
-			return 0;
-		}
+            return 0;
+        }
 
-		private static string GetAppVersion()
-		{
-			return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
-		}
+        private static string GetAppVersion()
+        {
+            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
+        }
 
-		private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
-		{
-			// Returns True if no problems; otherwise, returns false
-			var lstValidParameters = new List<string> { "D", "Preview", "V", "Debug", "DB" };
+        private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
+        {
+            // Returns True if no problems; otherwise, returns false
+            var lstValidParameters = new List<string> { "D", "Preview", "V", "Debug", "DB" };
 
-			try
-			{
-				// Make sure no invalid parameters are present
-				if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
-				{
-					var badArguments = new List<string>();
-					foreach (var item in objParseCommandLine.InvalidParameters(lstValidParameters))
-					{
-						badArguments.Add("/" + item);
-					}
+            try
+            {
+                // Make sure no invalid parameters are present
+                if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
+                {
+                    var badArguments = new List<string>();
+                    foreach (var item in objParseCommandLine.InvalidParameters(lstValidParameters))
+                    {
+                        badArguments.Add("/" + item);
+                    }
 
-					ShowErrorMessage("Invalid commmand line parameters", badArguments);
+                    ShowErrorMessage("Invalid commmand line parameters", badArguments);
 
-					return false;
-				}
+                    return false;
+                }
 
-				// Query objParseCommandLine to see if various parameters are present						
-				if (objParseCommandLine.NonSwitchParameterCount > 0)
-				{
-					mDataPkgIDList = objParseCommandLine.RetrieveNonSwitchParameter(0);
-				}
+                // Query objParseCommandLine to see if various parameters are present						
+                if (objParseCommandLine.NonSwitchParameterCount > 0)
+                {
+                    mDataPkgIDList = objParseCommandLine.RetrieveNonSwitchParameter(0);
+                }
 
-				string strValue;
-				if (objParseCommandLine.RetrieveValueForParameter("D", out strValue))
-				{
-					if (string.IsNullOrWhiteSpace(strValue))
-						ShowErrorMessage("/D does not have a date; date threshold will not be used");
-					else
-					{
-						DateTime dtThreshold;
-						if (DateTime.TryParse(strValue, out dtThreshold))
-						{
-							mDateThreshold = dtThreshold;
-						}
-						else
-							ShowErrorMessage("Invalid date specified with /D:" + strValue);
-					}
+                string strValue;
+                if (objParseCommandLine.RetrieveValueForParameter("D", out strValue))
+                {
+                    if (string.IsNullOrWhiteSpace(strValue))
+                        ShowErrorMessage("/D does not have a date; date threshold will not be used");
+                    else
+                    {
+                        DateTime dtThreshold;
+                        if (DateTime.TryParse(strValue, out dtThreshold))
+                        {
+                            mDateThreshold = dtThreshold;
+                        }
+                        else
+                            ShowErrorMessage("Invalid date specified with /D:" + strValue);
+                    }
 
-				}
+                }
 
-				if (objParseCommandLine.IsParameterPresent("Preview"))
-				{
-					mPreviewMode = true;
-				}
+                if (objParseCommandLine.IsParameterPresent("Preview"))
+                {
+                    mPreviewMode = true;
+                }
 
-				if (objParseCommandLine.IsParameterPresent("V"))
-				{
-					mVerifyOnly = true;
-				}
+                if (objParseCommandLine.IsParameterPresent("V"))
+                {
+                    mVerifyOnly = true;
+                }
 
-				if (objParseCommandLine.IsParameterPresent("Debug"))
-				{
-					mLogLevel = clsLogTools.LogLevels.DEBUG;
+                if (objParseCommandLine.IsParameterPresent("Debug"))
+                {
+                    mLogLevel = clsLogTools.LogLevels.DEBUG;
 
-				}
+                }
 
-				if (objParseCommandLine.RetrieveValueForParameter("DB", out strValue))
-				{
-					if (string.IsNullOrWhiteSpace(strValue))
-						ShowErrorMessage("/DB does not have a value; not overriding the connection string");
-					else
-						mDBConnectionString = strValue;
-				}
-
-
-
-				return true;
-			}
-			catch (Exception ex)
-			{
-				ShowErrorMessage("Error parsing the command line parameters: " + Environment.NewLine + ex.Message);
-			}
-
-			return false;
-		}
+                if (objParseCommandLine.RetrieveValueForParameter("DB", out strValue))
+                {
+                    if (string.IsNullOrWhiteSpace(strValue))
+                        ShowErrorMessage("/DB does not have a value; not overriding the connection string");
+                    else
+                        mDBConnectionString = strValue;
+                }
 
 
-		private static void ShowErrorMessage(string strMessage)
-		{
-			const string strSeparator = "------------------------------------------------------------------------------";
 
-			Console.WriteLine();
-			Console.WriteLine(strSeparator);
-			Console.WriteLine(strMessage);
-			Console.WriteLine(strSeparator);
-			Console.WriteLine();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ShowErrorMessage("Error parsing the command line parameters: " + Environment.NewLine + ex.Message);
+            }
 
-			WriteToErrorStream(strMessage);
-		}
-
-		private static void ShowErrorMessage(string strTitle, IEnumerable<string> items)
-		{
-			const string strSeparator = "------------------------------------------------------------------------------";
-
-		    Console.WriteLine();
-			Console.WriteLine(strSeparator);
-			Console.WriteLine(strTitle);
-			var strMessage = strTitle + ":";
-
-			foreach (var item in items)
-			{
-				Console.WriteLine("   " + item);
-				strMessage += " " + item;
-			}
-			Console.WriteLine(strSeparator);
-			Console.WriteLine();
-
-			WriteToErrorStream(strMessage);
-		}
+            return false;
+        }
 
 
-		private static void ShowProgramHelp()
-		{
-			var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        private static void ShowErrorMessage(string strMessage)
+        {
+            const string strSeparator = "------------------------------------------------------------------------------";
 
-			try
-			{
-				Console.WriteLine();
-				Console.WriteLine("This program uploads new/changed data package files to MyEMSL");
-				Console.WriteLine();
-				Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
+            Console.WriteLine();
+            Console.WriteLine(strSeparator);
+            Console.WriteLine(strMessage);
+            Console.WriteLine(strSeparator);
+            Console.WriteLine();
 
-				Console.WriteLine(" DataPackageIDList [/D:DateThreshold] [/Preview] [/V] [/DB:ConnectionString] [/Debug]");
+            WriteToErrorStream(strMessage);
+        }
 
-				Console.WriteLine();
-				Console.WriteLine("DataPackageIDList can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages");
-				Console.WriteLine("Items in DataPackageIDList can be ID ranges, for example 880-885 or even 892-");
-				Console.WriteLine();
-				Console.WriteLine("Use /D to specify a date threshold for finding modified data packages; if a data package does not have any files modified on/after the /D date, then the data package will not be uploaded to MyEMSL");
-				Console.WriteLine();
-				Console.WriteLine("Use /Preview to preview any files that would be uploaded");
-				Console.WriteLine("Note that when uploading files this program must be run as user pnl\\svc-dms");
-				Console.WriteLine("");
-				Console.WriteLine("Use /V to verify recently uploaded data packages and skip looking for new/changed files");
-				Console.WriteLine("Use /DB to override the default connection string of " + clsDataPackageArchiver.CONNECTION_STRING);
-				Console.WriteLine();
-				Console.WriteLine("Use /Debug to enable the display (and logging) of debug messages");
-				Console.WriteLine();
-				Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013");
-				Console.WriteLine("Version: " + GetAppVersion());
-				Console.WriteLine();
+        private static void ShowErrorMessage(string strTitle, IEnumerable<string> items)
+        {
+            const string strSeparator = "------------------------------------------------------------------------------";
 
-				Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com");
-				Console.WriteLine("Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/");
-				Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine(strSeparator);
+            Console.WriteLine(strTitle);
+            var strMessage = strTitle + ":";
 
-				// Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
-				System.Threading.Thread.Sleep(750);
+            foreach (var item in items)
+            {
+                Console.WriteLine("   " + item);
+                strMessage += " " + item;
+            }
+            Console.WriteLine(strSeparator);
+            Console.WriteLine();
 
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("Error displaying the program syntax: " + ex.Message);
-			}
+            WriteToErrorStream(strMessage);
+        }
 
-		}
 
-		private static void WriteToErrorStream(string strErrorMessage)
-		{
-			try
-			{
-				using (var swErrorStream = new System.IO.StreamWriter(Console.OpenStandardError()))
-				{
-					swErrorStream.WriteLine(strErrorMessage);
-				}
-			}
-			// ReSharper disable once EmptyGeneralCatchClause
-			catch
-			{
-				// Ignore errors here
-			}
-		}
+        private static void ShowProgramHelp()
+        {
+            var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-		static void ShowErrorMessage(string message, bool pauseAfterError)
-		{
-			Console.WriteLine();
-			Console.WriteLine("===============================================");
+            try
+            {
+                Console.WriteLine();
+                Console.WriteLine("This program uploads new/changed data package files to MyEMSL");
+                Console.WriteLine();
+                Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
-			Console.WriteLine(message);
+                Console.WriteLine(" DataPackageIDList [/D:DateThreshold] [/Preview] [/V] [/DB:ConnectionString] [/Debug]");
 
-			if (pauseAfterError)
-			{
-				Console.WriteLine("===============================================");
-				System.Threading.Thread.Sleep(1500);
-			}
-		}
+                Console.WriteLine();
+                Console.WriteLine("DataPackageIDList can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages");
+                Console.WriteLine("Items in DataPackageIDList can be ID ranges, for example 880-885 or even 892-");
+                Console.WriteLine();
+                Console.WriteLine("Use /D to specify a date threshold for finding modified data packages; if a data package does not have any files modified on/after the /D date, then the data package will not be uploaded to MyEMSL");
+                Console.WriteLine();
+                Console.WriteLine("Use /Preview to preview any files that would be uploaded");
+                Console.WriteLine("Note that when uploading files this program must be run as user pnl\\svc-dms");
+                Console.WriteLine("");
+                Console.WriteLine("Use /V to verify recently uploaded data packages and skip looking for new/changed files");
+                Console.WriteLine("Use /DB to override the default connection string of " + clsDataPackageArchiver.CONNECTION_STRING);
+                Console.WriteLine();
+                Console.WriteLine("Use /Debug to enable the display (and logging) of debug messages");
+                Console.WriteLine();
+                Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013");
+                Console.WriteLine("Version: " + GetAppVersion());
+                Console.WriteLine();
 
-		#region "Event Handlers"
+                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com");
+                Console.WriteLine("Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/");
+                Console.WriteLine();
 
-		static void archiver_ErrorEvent(object sender, MessageEventArgs e)
-		{
-			ShowErrorMessage(e.Message);
-		}
+                // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
+                System.Threading.Thread.Sleep(750);
 
-		static void archiver_MessageEvent(object sender, MessageEventArgs e)
-		{
-			Console.WriteLine(e.Message);
-		}
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error displaying the program syntax: " + ex.Message);
+            }
 
-		#endregion
+        }
 
-	}
+        private static void WriteToErrorStream(string strErrorMessage)
+        {
+            try
+            {
+                using (var swErrorStream = new System.IO.StreamWriter(Console.OpenStandardError()))
+                {
+                    swErrorStream.WriteLine(strErrorMessage);
+                }
+            }
+            // ReSharper disable once EmptyGeneralCatchClause
+            catch
+            {
+                // Ignore errors here
+            }
+        }
+
+        static void ShowErrorMessage(string message, bool pauseAfterError)
+        {
+            Console.WriteLine();
+            Console.WriteLine("===============================================");
+
+            Console.WriteLine(message);
+
+            if (pauseAfterError)
+            {
+                Console.WriteLine("===============================================");
+                System.Threading.Thread.Sleep(1500);
+            }
+        }
+
+        #region "Event Handlers"
+
+        static void archiver_ErrorEvent(object sender, MessageEventArgs e)
+        {
+            ShowErrorMessage(e.Message);
+        }
+
+        static void archiver_MessageEvent(object sender, MessageEventArgs e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
+        #endregion
+
+    }
 }

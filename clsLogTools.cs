@@ -59,7 +59,7 @@ namespace DataPackage_Archive_Manager
         private static string m_FileDate;
         private static string m_BaseFileName;
         private static FileAppender m_FileAppender;
-		
+        
         private static RollingFileAppender m_FtpLogFileAppender;
         private static bool m_FtpLogEnabled;
         #endregion

@@ -201,19 +201,19 @@ namespace DataPackage_Archive_Manager
 
             // Filter out files that we do not want to archive
             var lstFilesToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase)
-			{
-				"Thumbs.db",
-				".DS_Store",
-				".Rproj.user"
-			};
+            {
+                "Thumbs.db",
+                ".DS_Store",
+                ".Rproj.user"
+            };
 
             // Also filter out Thermo .raw files, mzML files, etc.
             var lstExtensionsToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase)
-			{
-				".raw",
-				".mzXML",
-				".mzML"
-			};
+            {
+                ".raw",
+                ".mzXML",
+                ".mzML"
+            };
 
             var lstDataPackageFiles = new List<FileInfo>();
             foreach (var dataPkgFile in lstDataPackageFilesAll)
@@ -769,9 +769,9 @@ namespace DataPackage_Archive_Manager
 
                         // Make a new group
                         lstCurrentGroup = new List<int>
-						{
-							lstDataPkgInfo[i].ID
-						};
+                        {
+                            lstDataPkgInfo[i].ID
+                        };
                         runningCount = fileCount;
                     }
                     else
@@ -808,7 +808,7 @@ namespace DataPackage_Archive_Manager
                     {
                         // Verify that MyEMSL is returning expected results for data packages known to have been stored previously in MyEMSL
                         // If no results are found, we will presume that MyEMSL is not available, or is available but is misconfigured (or has permissions issues)
-				        var success = VerifyKnownMyEMSLSearchResults();
+                        var success = VerifyKnownMyEMSLSearchResults();
 
                         // Continue only if previewing the data or if known MyEMSL results were found
                         // If known results were not found, we don't want to risk pushing 1000's of data package files into MyEMSL when those files likely are already stored in MyEMSL
