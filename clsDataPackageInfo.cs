@@ -19,20 +19,20 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         public clsDataPackageInfo(int dataPkgID)
         {
-            this.ID = dataPkgID;
-            this.Name = string.Empty;
-            this.OwnerPRN = string.Empty;
-            this.OwnerEUSID = 0;
-            this.Created = DateTime.Now;
-            this.FolderName = string.Empty;
-            this.SharePath = string.Empty;
-            this.LocalPath = string.Empty;
+            ID = dataPkgID;
+            Name = string.Empty;
+            OwnerPRN = string.Empty;
+            OwnerEUSID = 0;
+            Created = DateTime.Now;
+            FolderName = string.Empty;
+            SharePath = string.Empty;
+            LocalPath = string.Empty;
 
         }
 
         public override string ToString()
         {
-            return this.ID.ToString();
+            return ID.ToString();
         }
     }
 }

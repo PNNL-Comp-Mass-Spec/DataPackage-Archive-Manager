@@ -90,7 +90,7 @@ namespace DataPackage_Archive_Manager
         /// Gigasax.DMS_Data_Package database
         /// </summary>
         public string DBConnectionString
-        { get; private set; }
+        { get; }
 
         public string ErrorMessage
         { get; private set; }
@@ -108,7 +108,7 @@ namespace DataPackage_Archive_Manager
         /// ERROR = 2,
         /// FATAL = 1</remarks>
         public clsLogTools.LogLevels LogLevel
-        { get; set; }
+        { get; }
 
         #endregion
 
@@ -149,7 +149,7 @@ namespace DataPackage_Archive_Manager
             clsDataPackageInfo dataPkgInfo,
             DirectoryInfo diDataPkg,
             DateTime dateThreshold,
-            MyEMSLReader.DataPackageListInfo dataPackageInfoCache,
+            DataPackageListInfo dataPackageInfoCache,
             out udtMyEMSLUploadInfo uploadInfo)
         {
             var lstDatasetFilesToArchive = new List<FileInfoObject>();
@@ -472,7 +472,7 @@ namespace DataPackage_Archive_Manager
                 {
                     try
                     {
-                        using (var cnDB = new SqlConnection(this.DBConnectionString))
+                        using (var cnDB = new SqlConnection(DBConnectionString))
                         {
                             cnDB.Open();
 
@@ -528,7 +528,7 @@ namespace DataPackage_Archive_Manager
             }
             catch (Exception ex)
             {
-                var msg = "Exception connecting to database in GetStatusURIs: " + ex.Message + "; ConnectionString: " + this.DBConnectionString;
+                var msg = "Exception connecting to database in GetStatusURIs: " + ex.Message + "; ConnectionString: " + DBConnectionString;
                 ReportError(msg, false);
             }
 
@@ -537,20 +537,20 @@ namespace DataPackage_Archive_Manager
 
         private void Initialize()
         {
-            this.ErrorMessage = string.Empty;
-            this.mLastStatusUpdate = DateTime.UtcNow;
+            ErrorMessage = string.Empty;
+            mLastStatusUpdate = DateTime.UtcNow;
 
             // Set up the loggers
             const string logFileName = @"Logs\DataPkgArchiver";
-            clsLogTools.CreateFileLogger(logFileName, this.LogLevel);
+            clsLogTools.CreateFileLogger(logFileName, LogLevel);
 
-            clsLogTools.CreateDbLogger(this.DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
+            clsLogTools.CreateDbLogger(DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
 
             // Make initial log entry
             var msg = "=== Started Data Package Archiver V" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " ===== ";
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.INFO, msg);
 
-            m_ExecuteSP = new PRISM.DataBase.clsExecuteDatabaseSP(this.DBConnectionString);
+            m_ExecuteSP = new PRISM.DataBase.clsExecuteDatabaseSP(DBConnectionString);
             m_ExecuteSP.DBErrorEvent += m_ExecuteSP_DBErrorEvent;
 
             mMyEMSLUploader = new Upload();
@@ -572,7 +572,7 @@ namespace DataPackage_Archive_Manager
             try
             {
 
-                using (var cnDB = new SqlConnection(this.DBConnectionString))
+                using (var cnDB = new SqlConnection(DBConnectionString))
                 {
                     cnDB.Open();
 
@@ -798,13 +798,13 @@ namespace DataPackage_Archive_Manager
                 {
                     groupNumber++;
 
-                    var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
+                    var dataPackageInfoCache = new DataPackageListInfo();
                     foreach (var dataPkgID in dataPkgGroup)
                     {
                         dataPackageInfoCache.AddDataPackage(dataPkgID);
                     }
 
-                    if (!this.PreviewMode && DateTime.UtcNow.Subtract(dtLastSimpleSearchVerify).TotalMinutes > 15)
+                    if (!PreviewMode && DateTime.UtcNow.Subtract(dtLastSimpleSearchVerify).TotalMinutes > 15)
                     {
                         // Verify that MyEMSL is returning expected results for data packages known to have been stored previously in MyEMSL
                         // If no results are found, we will presume that MyEMSL is not available, or is available but is misconfigured (or has permissions issues)
@@ -859,7 +859,7 @@ namespace DataPackage_Archive_Manager
                 return true;
             }
 
-            if (this.PreviewMode)
+            if (PreviewMode)
                 return true;
 
             if (lstDataPkgInfo.Count == 1)
@@ -872,7 +872,7 @@ namespace DataPackage_Archive_Manager
             return false;
         }
 
-        private bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, DateTime dateThreshold, MyEMSLReader.DataPackageListInfo dataPackageInfoCache)
+        private bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, DateTime dateThreshold, DataPackageListInfo dataPackageInfoCache)
         {
             var success = false;
             var uploadInfo = new udtMyEMSLUploadInfo();
@@ -945,7 +945,7 @@ namespace DataPackage_Archive_Manager
 
                     if (dataPkgInfo.MyEMSLUploads > 0)
                     {
-                        var logToDB = !this.PreviewMode;
+                        var logToDB = !PreviewMode;
 
                         ReportMessage(
                             "Data package " + dataPkgInfo.ID +
@@ -956,7 +956,7 @@ namespace DataPackage_Archive_Manager
                 }
 
 
-                if (this.PreviewMode)
+                if (PreviewMode)
                 {
                     ReportMessage("Need to upload " + lstUnmatchedFiles.Count + " file(s) for Data Package " + dataPkgInfo.ID);
 
@@ -1081,7 +1081,7 @@ namespace DataPackage_Archive_Manager
 
             OnErrorMessage(new MessageEventArgs(message));
 
-            this.ErrorMessage = string.Copy(message);
+            ErrorMessage = string.Copy(message);
         }
 
         /// <summary>
@@ -1094,14 +1094,14 @@ namespace DataPackage_Archive_Manager
         public bool StartProcessing(List<KeyValuePair<int, int>> lstDataPkgIDs, DateTime dateThreshold, bool previewMode)
         {
 
-            this.PreviewMode = previewMode;
+            PreviewMode = previewMode;
 
             // Upload new data
             var success = ProcessDataPackages(lstDataPkgIDs, dateThreshold);
 
             // Verify uploaded data (even if success is false)
             // We're setting PreviewMode again in case it was auto-set to True because the current user is not svc-dms
-            this.PreviewMode = previewMode;
+            PreviewMode = previewMode;
             VerifyUploadStatus();
 
             return success;
@@ -1217,7 +1217,7 @@ namespace DataPackage_Archive_Manager
                 cmd.Parameters.Add("@message", System.Data.SqlDbType.VarChar, 512);
                 cmd.Parameters["@message"].Direction = System.Data.ParameterDirection.Output;
 
-                if (this.PreviewMode)
+                if (PreviewMode)
                 {
                     Console.WriteLine("Simulate call to " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Entry_ID=" + statusInfo.EntryID + ", DataPackageID=" + statusInfo.DataPackageID + " Entry_ID=" + statusInfo.EntryID);
                     return true;
@@ -1391,7 +1391,7 @@ namespace DataPackage_Archive_Manager
 
                 for (var i = 0; i < distinctDataPackageIDs.Count; i += DATA_PACKAGE_GROUP_SIZE)
                 {
-                    var dataPackageInfoCache = new MyEMSLReader.DataPackageListInfo();
+                    var dataPackageInfoCache = new DataPackageListInfo();
                     var dctURIsInGroup = new Dictionary<int, udtMyEMSLStatusInfo>();
 
                     for (var j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
@@ -1579,7 +1579,7 @@ namespace DataPackage_Archive_Manager
                     var msg = "Deleting metadata file for Data package " + statusInfo.Value.DataPackageID +
                               " since it is now available and verified: " + fiMetadataFile.FullName;
 
-                    if (this.PreviewMode)
+                    if (PreviewMode)
                     {
                         ReportMessage("SIMULATE: " + msg);
                     }
@@ -1618,7 +1618,6 @@ namespace DataPackage_Archive_Manager
 
         public event MessageEventHandler ErrorEvent;
         public event MessageEventHandler MessageEvent;
-        public event ProgressEventHandler ProgressEvent;
 
         #endregion
 
@@ -1668,20 +1667,12 @@ namespace DataPackage_Archive_Manager
 
         public void OnErrorMessage(MessageEventArgs e)
         {
-            if (ErrorEvent != null)
-                ErrorEvent(this, e);
+            ErrorEvent?.Invoke(this, e);
         }
 
         public void OnMessage(MessageEventArgs e)
         {
-            if (MessageEvent != null)
-                MessageEvent(this, e);
-        }
-
-        public void OnProgressUpdate(ProgressEventArgs e)
-        {
-            if (ProgressEvent != null)
-                ProgressEvent(this, e);
+            MessageEvent?.Invoke(this, e);
         }
 
         #endregion
