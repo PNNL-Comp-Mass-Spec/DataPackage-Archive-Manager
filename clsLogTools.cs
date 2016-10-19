@@ -54,14 +54,11 @@ namespace DataPackage_Archive_Manager
         private static readonly ILog m_FileLogger = LogManager.GetLogger("FileLogger");
         private static readonly ILog m_DbLogger = LogManager.GetLogger("DbLogger");
         private static readonly ILog m_SysLogger = LogManager.GetLogger("SysLogger");
-        private static readonly ILog m_FtpFileLogger = LogManager.GetLogger("FtpFileLogger");
 
         private static string m_FileDate;
         private static string m_BaseFileName;
         private static FileAppender m_FileAppender;
         
-        private static RollingFileAppender m_FtpLogFileAppender;
-        private static bool m_FtpLogEnabled;
         #endregion
 
         #region "Properties"
@@ -73,7 +70,7 @@ namespace DataPackage_Archive_Manager
         {
             get
             {
-                if (m_FileAppender == null || string.IsNullOrEmpty(m_FileAppender.File))
+                if (string.IsNullOrEmpty(m_FileAppender?.File))
                     return string.Empty;
 
                 return m_FileAppender.File;
@@ -85,10 +82,8 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         /// <returns>TRUE if debug level enabled for file logger; FALSE otherwise</returns>
         /// <remarks></remarks>
-        public static bool FileLogDebugEnabled
-        {
-            get { return m_FileLogger.IsDebugEnabled; }
-        }
+        public static bool FileLogDebugEnabled => m_FileLogger.IsDebugEnabled;
+
         #endregion
 
         #region "Methods"
@@ -200,17 +195,6 @@ namespace DataPackage_Archive_Manager
                 default:
                     throw new Exception("Invalid log level specified");
             }
-        }
-
-        /// <summary>
-        /// Writes an FTP transaction message to the FTP logger
-        /// </summary>
-        /// <param name="message">Message to log</param>
-        public static void WriteFtpLog(string message)
-        {
-            if (!m_FtpLogEnabled) return;
-
-            if (m_FtpFileLogger.IsDebugEnabled) m_FtpFileLogger.Debug(message);
         }
 
         /// <summary>
@@ -350,34 +334,6 @@ namespace DataPackage_Archive_Manager
         }
 
         /// <summary>
-        /// Creates a file appender for FTP transaction logging
-        /// </summary>
-        /// <returns>A configured file appender</returns>
-        private static RollingFileAppender CreateFtpLogfileAppender()
-        {
-
-            var layout = new log4net.Layout.PatternLayout
-            {
-                ConversionPattern = "%message%newline"
-            };
-            layout.ActivateOptions();
-
-            var returnAppender = new RollingFileAppender
-            {
-                Name = "RollingFileAppender",
-                File = "FTPLog_",
-                AppendToFile = true,
-                RollingStyle = RollingFileAppender.RollingMode.Date,
-                DatePattern = "yyyyMMdd",
-                Layout = layout
-            };
-
-            returnAppender.ActivateOptions();
-
-            return returnAppender;
-        }
-
-        /// <summary>
         /// Configures the file logger
         /// </summary>
         /// <param name="logFileName">Base name for log file</param>
@@ -398,21 +354,6 @@ namespace DataPackage_Archive_Manager
         public static void CreateFileLogger(string logFileName, LogLevels logLevel)
         {
             CreateFileLogger(logFileName, (int)logLevel);
-        }
-
-        /// <summary>
-        /// Configures the FTP logger
-        /// </summary>
-        /// <param name="logFileName">Name of FTP log file</param>
-        public static void CreateFtpLogFileLogger(string logFileName)
-        {
-            var curLogger = (log4net.Repository.Hierarchy.Logger)m_FtpFileLogger.Logger;
-            m_FtpLogFileAppender = CreateFtpLogfileAppender();
-
-            curLogger.AddAppender(m_FtpLogFileAppender);
-            curLogger.Level = log4net.Core.Level.Debug;
-            
-            m_FtpLogEnabled = true;
         }
 
         /// <summary>
