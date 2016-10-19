@@ -1,0 +1,27 @@
+{
+  "bundleName": "omics_dms",
+  "creationDate": "1476751612",
+  "eusInfo": {
+    "groups": [
+      {
+        "name": "2698",
+        "type": "omics.dms.datapackage_id"
+      }
+    ],
+    "proposalID": "49001"
+    "uploaderEusId": "43032"
+  },
+  "file": [
+    {
+      "sha1Hash": "b552cabd2e53cfd1a339b014a56617542ebef8fb",
+      "destinationDirectory": "2698_Orphan_Methods_Comparisons",
+      "fileName": "SampleComparison_Aug2016.xlsx"
+    },
+    {
+      "sha1Hash": "8baff2cf9e5c54545e04cc329768e49f8d92d379",
+      "destinationDirectory": "2698_Orphan_Methods_Comparisons",
+      "fileName": "SampleComparison_June2016.xlsx"
+    }
+  ],
+  "version": "1.2.0"
+}

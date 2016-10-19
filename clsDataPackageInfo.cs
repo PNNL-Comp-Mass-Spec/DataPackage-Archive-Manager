@@ -8,6 +8,7 @@ namespace DataPackage_Archive_Manager
         public string Name { get; set; }            // Data Package Name
         public string OwnerPRN { get; set; }        // Data Package Owner's username
         public int OwnerEUSID { get; set; }         // EUS ID of the data package owner
+        public string EUSProposalID { get; set; }      // EUS Proposal ID (most common one in use by the datasets or jobs associated with the data package)
         public DateTime Created { get; set; }
         public string FolderName { get; set; }		// Example: 894_CPTAC_Batch4_Global_CompRef
         public string SharePath { get; set; }		// Example: \\protoapps\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
@@ -23,6 +24,7 @@ namespace DataPackage_Archive_Manager
             Name = string.Empty;
             OwnerPRN = string.Empty;
             OwnerEUSID = 0;
+            EUSProposalID = string.Empty;
             Created = DateTime.Now;
             FolderName = string.Empty;
             SharePath = string.Empty;

@@ -578,7 +578,7 @@ namespace DataPackage_Archive_Manager
 
                     var sql = new StringBuilder();
 
-                    sql.Append(" SELECT ID, Name, Owner, EUS_Person_ID, Created, " +
+                    sql.Append(" SELECT ID, Name, Owner, EUS_Person_ID, EUS_Proposal_ID AS EUS_Proposal_ID, Created, " +
                                " Package_File_Folder, Share_Path, Local_Path, MyEMSL_Uploads " +
                                " FROM V_Data_Package_Export");
 
@@ -615,6 +615,7 @@ namespace DataPackage_Archive_Manager
                             Name = GetDBString(reader, "Name"),
                             OwnerPRN = GetDBString(reader, "Owner"),
                             OwnerEUSID = GetDBInt(reader, "EUS_Person_ID"),
+                            EUSProposalID = GetDBString(reader, "EUS_Proposal_ID"),
                             Created = GetDBDate(reader, "Created"),
                             FolderName = GetDBString(reader, "Package_File_Folder"),
                             SharePath = GetDBString(reader, "Share_Path"),
@@ -734,14 +735,18 @@ namespace DataPackage_Archive_Manager
                     return false;
                 }
 
-                if (Environment.UserName.ToLower() != "svc-dms")
+                if (!PreviewMode)
                 {
-                    // The current user is not svc-dms
-                    // Uploaded files would be associated with the wrong username and thus would not be visible to all DMS Users
-                    if (!this.PreviewMode)
+                    if (Environment.UserName.ToLower() == "svc-dms")
                     {
-                        this.PreviewMode = true;
-                        ReportMessage(@"Current user is not pnl\svc-dms; auto-enabling PreviewMode");
+                            ReportMessage(@"Pushing data into MyEMSL as user pnl\" + Environment.UserName);
+                    }
+                    else
+                    {
+                        // The current user is not svc-dms
+                        // Uploaded files would be associated with the wrong username and thus would not be visible to all DMS Users
+                        PreviewMode = true;
+                        ReportMessage(@"Current user is not pnl\svc-dms; auto-enabling PreviewMode for user " + Environment.UserName);
                     }
                 }
 
@@ -988,9 +993,23 @@ namespace DataPackage_Archive_Manager
                         uploadMetadata.EUSOperatorID = dataPkgInfo.OwnerEUSID;
                     }
 
+                    if (string.IsNullOrWhiteSpace(dataPkgInfo.EUSProposalID))
+                    {
+                        ReportMessage("Warning: data package does not have an associated EUS Proposal; using " + Upload.DEFAULT_EUS_PROPOSAL_ID);
+                        uploadMetadata.EUSProposalID = Pacifica.Core.Upload.DEFAULT_EUS_PROPOSAL_ID;
+                    }
+                    else
+                    {
+                        uploadMetadata.EUSProposalID = dataPkgInfo.EUSProposalID;
+                    }
+
                     // Instantiate the metadata object
                     Upload.udtEUSInfo eusInfo;
                     var metadataObject = Upload.CreateMetadataObject(uploadMetadata, lstUnmatchedFiles, out eusInfo);
+
+                    var metadataDescription = Upload.GetMetadataObjectDescription(metadataObject);
+                    ReportMessage("UploadMetadata: " + metadataDescription);
+
                     string statusURL;
 
                     mMyEMSLUploader.TransferFolderPath = diDataPkg.Parent.FullName;
