@@ -17,7 +17,7 @@ namespace DataPackage_Archive_Manager
     internal class Program
     {
 
-        public const string PROGRAM_DATE = "October 19, 2016";
+        public const string PROGRAM_DATE = "November 4, 2016";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -218,7 +218,9 @@ namespace DataPackage_Archive_Manager
 
             Console.WriteLine();
             Console.WriteLine(strSeparator);
+            Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(strMessage);
+            Console.ResetColor();
             Console.WriteLine(strSeparator);
             Console.WriteLine();
 
@@ -231,6 +233,7 @@ namespace DataPackage_Archive_Manager
 
             Console.WriteLine();
             Console.WriteLine(strSeparator);
+            Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(strTitle);
             var strMessage = strTitle + ":";
 
@@ -239,6 +242,7 @@ namespace DataPackage_Archive_Manager
                 Console.WriteLine("   " + item);
                 strMessage += " " + item;
             }
+            Console.ResetColor();
             Console.WriteLine(strSeparator);
             Console.WriteLine();
 
@@ -282,7 +286,7 @@ namespace DataPackage_Archive_Manager
                 Console.WriteLine();
 
                 // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
-                System.Threading.Thread.Sleep(750);
+                System.Threading.Thread.Sleep(1500);
 
             }
             catch (Exception ex)
