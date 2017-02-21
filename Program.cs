@@ -17,7 +17,7 @@ namespace DataPackage_Archive_Manager
     internal class Program
     {
 
-        public const string PROGRAM_DATE = "November 4, 2016";
+        public const string PROGRAM_DATE = "February 21, 2017";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -76,8 +76,10 @@ namespace DataPackage_Archive_Manager
                 var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
 
                 // Attach the events
-                archiver.ErrorEvent += archiver_ErrorEvent;
-                archiver.MessageEvent += archiver_MessageEvent;
+                archiver.DebugEvent += Archiver_DebugEvent;
+                archiver.ErrorEvent += Archiver_ErrorEvent;
+                archiver.StatusEvent += Archiver_StatusEvent;
+                archiver.WarningEvent += Archiver_WarningEvent;
 
                 if (mVerifyOnly)
                 {
@@ -312,30 +314,47 @@ namespace DataPackage_Archive_Manager
             }
         }
 
-        static void ShowErrorMessage(string message, bool pauseAfterError)
-        {
-            Console.WriteLine();
-            Console.WriteLine("===============================================");
-
-            Console.WriteLine(message);
-
-            if (pauseAfterError)
-            {
-                Console.WriteLine("===============================================");
-                System.Threading.Thread.Sleep(1500);
-            }
-        }
-
         #region "Event Handlers"
 
-        static void archiver_ErrorEvent(object sender, MessageEventArgs e)
+        private static void Archiver_DebugEvent(string strMessage)
         {
-            ShowErrorMessage(e.Message);
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine("  " + strMessage);
+            Console.ResetColor();
         }
 
-        static void archiver_MessageEvent(object sender, MessageEventArgs e)
+        private static void Archiver_ErrorEvent(string errorMessage, Exception ex)
         {
-            Console.WriteLine(e.Message);
+            string formattedError;
+            if (ex == null || errorMessage.EndsWith(ex.Message))
+            {
+                formattedError = errorMessage;
+            }
+            else
+            {
+                formattedError = errorMessage + ": " + ex.Message;
+            }
+
+            ShowErrorMessage(formattedError);
+
+            if (ex != null)
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine(clsStackTraceFormatter.GetExceptionStackTraceMultiLine(ex));
+            }
+
+            Console.ResetColor();
+        }
+
+        private static void Archiver_StatusEvent(string strMessage)
+        {
+            Console.WriteLine(strMessage);
+        }
+        private static void Archiver_WarningEvent(string strMessage)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(strMessage);
+            Console.ResetColor();
         }
 
         #endregion

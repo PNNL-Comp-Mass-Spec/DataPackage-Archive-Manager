@@ -9,10 +9,12 @@ using System.Text.RegularExpressions;
 using System.Data.SqlClient;
 using MyEMSLReader;
 using Pacifica.Core;
+using PRISM;
+using Utilities = Pacifica.Core.Utilities;
 
 namespace DataPackage_Archive_Manager
 {
-    class clsDataPackageArchiver
+    class clsDataPackageArchiver : clsEventNotifier
     {
         #region "Constants"
 
@@ -78,7 +80,7 @@ namespace DataPackage_Archive_Manager
 
         #region "Class variables"
 
-        private PRISM.DataBase.clsExecuteDatabaseSP m_ExecuteSP;
+        private PRISM.clsExecuteDatabaseSP m_ExecuteSP;
         private Upload mMyEMSLUploader;
         private DateTime mLastStatusUpdate;
 
@@ -117,18 +119,15 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         public clsDataPackageArchiver(string connectionString, clsLogTools.LogLevels logLevel)
         {
-            this.DBConnectionString = connectionString;
-            this.LogLevel = logLevel;
+            DBConnectionString = connectionString;
+            LogLevel = logLevel;
 
             Initialize();
         }
 
         private short BoolToTinyInt(bool value)
         {
-            if (value)
-                return 1;
-            else
-                return 0;
+            return (short)(value ? 1 : 0);
         }
 
 
@@ -138,11 +137,7 @@ namespace DataPackage_Archive_Manager
             if (!diDataPkg.Exists)
                 diDataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
 
-            if (!diDataPkg.Exists)
-                return 0;
-            else
-                return diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
-
+            return !diDataPkg.Exists ? 0 : diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
         }
 
         private List<FileInfoObject> FindDataPackageFilesToArchive(
@@ -253,7 +248,7 @@ namespace DataPackage_Archive_Manager
                         }
                     }
                 }
-               
+
                 if (keep)
                     lstDataPackageFiles.Add(dataPkgFile);
 
@@ -276,7 +271,7 @@ namespace DataPackage_Archive_Manager
                 else
                     msg += " since they are system or temporary files";
 
-                ReportMessage(msg + "; nothing to archive", clsLogTools.LogLevels.INFO);
+                ReportMessage(msg + "; nothing to archive");
                 ReportMessage("  Data Package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, clsLogTools.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
@@ -320,7 +315,7 @@ namespace DataPackage_Archive_Manager
                 var archiveFiles = dataPackageInfoCache.FindFiles(fiLocalFile.Name, subDir, dataPkgInfo.ID, recurse: false);
 
                 if (diDataPkg.Parent == null)
-                    throw new DirectoryNotFoundException("Unable to determine the parent folder for directory " + diDataPkg.Name);
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
 
                 // Possibly add the file to lstDatasetFilesToArchive
                 AddFileIfArchiveRequired(diDataPkg, ref uploadInfo, lstDatasetFilesToArchive, fiLocalFile, archiveFiles);
@@ -334,7 +329,7 @@ namespace DataPackage_Archive_Manager
                     if (DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 30)
                     {
                         dtLastProgress = DateTime.UtcNow;
-                        ReportMessage(progressMessage, clsLogTools.LogLevels.INFO);
+                        ReportMessage(progressMessage);
                     }
                     else
                     {
@@ -364,6 +359,9 @@ namespace DataPackage_Archive_Manager
             if (archiveFiles.Count == 0)
             {
                 // File not found; add to lstDatasetFilesToArchive
+                if (diDataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+
                 lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
                 uploadInfo.FileCountNew++;
                 uploadInfo.Bytes += fiLocalFile.Length;
@@ -383,6 +381,9 @@ namespace DataPackage_Archive_Manager
             if (fiLocalFile.Length != archiveFile.FileInfo.FileSizeBytes)
             {
                 // Sizes don't match; add to lstDatasetFilesToArchive
+                if (diDataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+
                 lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
                 uploadInfo.FileCountUpdated++;
                 uploadInfo.Bytes += fiLocalFile.Length;
@@ -402,9 +403,12 @@ namespace DataPackage_Archive_Manager
 
                 if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
                 {
+                    if (diDataPkg.Parent == null)
+                        throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+
                     // Hashes don't match; add to lstDatasetFilesToArchive
                     // We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
-                    var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.Directory.FullName,
+                    var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.DirectoryName,
                                                                                            diDataPkg.Parent.FullName);
 
                     lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, relativeDestinationDirectory, sha1HashHex));
@@ -421,9 +425,8 @@ namespace DataPackage_Archive_Manager
 
             if (Convert.IsDBNull(value))
                 return DateTime.Now;
-            else
-                return (DateTime)value;
 
+            return (DateTime)value;
         }
 
         private int GetDBInt(SqlDataReader reader, string columnName)
@@ -432,9 +435,8 @@ namespace DataPackage_Archive_Manager
 
             if (Convert.IsDBNull(value))
                 return 0;
-            else
-                return (int)value;
 
+            return (int)value;
         }
 
         private string GetDBString(SqlDataReader reader, string columnName)
@@ -443,9 +445,8 @@ namespace DataPackage_Archive_Manager
 
             if (Convert.IsDBNull(value))
                 return string.Empty;
-            else
-                return (string)value;
 
+            return (string)value;
         }
 
         private IEnumerable<clsDataPackageInfo> GetFilteredDataPackageInfoList(IEnumerable<clsDataPackageInfo> lstDataPkgInfo, IEnumerable<int> dataPkgGroup)
@@ -519,7 +520,7 @@ namespace DataPackage_Archive_Manager
                         retryCount -= 1;
                         var msg = "Exception querying database in GetStatusURIs: " + ex.Message;
                         msg += ", RetryCount = " + retryCount;
-                        ReportError(msg, true);
+                        ReportError(msg, true, ex);
 
                         //Delay for 5 second before trying again
                         System.Threading.Thread.Sleep(5000);
@@ -529,7 +530,7 @@ namespace DataPackage_Archive_Manager
             catch (Exception ex)
             {
                 var msg = "Exception connecting to database in GetStatusURIs: " + ex.Message + "; ConnectionString: " + DBConnectionString;
-                ReportError(msg, false);
+                ReportError(msg, ex);
             }
 
             return dctURIs;
@@ -550,7 +551,7 @@ namespace DataPackage_Archive_Manager
             var msg = "=== Started Data Package Archiver V" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " ===== ";
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.INFO, msg);
 
-            m_ExecuteSP = new PRISM.DataBase.clsExecuteDatabaseSP(DBConnectionString);
+            m_ExecuteSP = new PRISM.clsExecuteDatabaseSP(DBConnectionString);
             m_ExecuteSP.DBErrorEvent += m_ExecuteSP_DBErrorEvent;
 
             mMyEMSLUploader = new Upload();
@@ -632,7 +633,7 @@ namespace DataPackage_Archive_Manager
             }
             catch (Exception ex)
             {
-                ReportError("Error in LookupDataPkgInfo: " + ex.Message, true);
+                ReportError("Error in LookupDataPkgInfo: " + ex.Message, true, ex);
 
                 // Include the stack trace in the log
                 clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, "Detail for error in LookupDataPkgInfo", ex);
@@ -739,7 +740,7 @@ namespace DataPackage_Archive_Manager
                 {
                     if (Environment.UserName.ToLower() == "svc-dms")
                     {
-                            ReportMessage(@"Pushing data into MyEMSL as user pnl\" + Environment.UserName);
+                        ReportMessage(@"Pushing data into MyEMSL as user pnl\" + Environment.UserName);
                     }
                     else
                     {
@@ -846,7 +847,7 @@ namespace DataPackage_Archive_Manager
             }
             catch (Exception ex)
             {
-                ReportError("Error in ProcessDataPackages: " + ex.Message, true);
+                ReportError("Error in ProcessDataPackages: " + ex.Message, true, ex);
 
                 // Include the stack trace in the log
                 clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, "Detail for error in ProcessDataPackages", ex);
@@ -893,9 +894,12 @@ namespace DataPackage_Archive_Manager
 
                 if (!diDataPkg.Exists)
                 {
-                    ReportMessage("Data package folder not found (also tried remote share path): " + dataPkgInfo.LocalPath, clsLogTools.LogLevels.WARN, false);
+                    ReportMessage("Data package folder not found (also tried remote share path): " + dataPkgInfo.LocalPath, clsLogTools.LogLevels.WARN);
                     return false;
                 }
+
+                if (diDataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
 
                 // Look for an existing metadata file
                 // For example, \\protoapps\dataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
@@ -1048,7 +1052,7 @@ namespace DataPackage_Archive_Manager
             }
             catch (Exception ex)
             {
-                ReportError("Error in ProcessOneDataPackage processing Data Package " + dataPkgInfo.ID + ": " + ex.Message, true);
+                ReportError("Error in ProcessOneDataPackage processing Data Package " + dataPkgInfo.ID + ": " + ex.Message, true, ex);
 
                 // Include the stack trace in the log
                 clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, "Detail for error in ProcessOneDataPackage for Data Package " + dataPkgInfo.ID, ex);
@@ -1066,39 +1070,49 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        private void ReportMessage(string message)
+        private void ReportMessage(
+            string message,
+            clsLogTools.LogLevels logLevel = clsLogTools.LogLevels.INFO,
+            bool logToDB = false)
         {
-            ReportMessage(message, clsLogTools.LogLevels.INFO, logToDB: false);
-        }
+            OnStatusEvent(message);
 
-        private void ReportMessage(string message, clsLogTools.LogLevels logLevel)
-        {
-            ReportMessage(message, logLevel, logToDB: false);
-        }
-
-        private void ReportMessage(string message, clsLogTools.LogLevels logLevel, bool logToDB)
-        {
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, logLevel, message);
 
             if (logToDB)
                 clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, logLevel, message.Trim());
 
-            OnMessage(new MessageEventArgs(message));
+            switch (logLevel)
+            {
+                case clsLogTools.LogLevels.DEBUG:
+                    OnDebugEvent(message);
+                    break;
+                case clsLogTools.LogLevels.ERROR:
+                    OnErrorEvent(message);
+                    break;
+                case clsLogTools.LogLevels.WARN:
+                    OnWarningEvent(message);
+                    break;
+                default:
+                    OnStatusEvent(message);
+                    break;
+            }
+
         }
 
-        private void ReportError(string message)
+        private void ReportError(string message, Exception ex)
         {
-            ReportError(message, false);
+            ReportError(message, false, ex);
         }
 
-        private void ReportError(string message, bool logToDB)
+        private void ReportError(string message, bool logToDB = false, Exception ex = null)
         {
+            OnErrorEvent(message, ex);
+
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.ERROR, message);
 
             if (logToDB)
                 clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, clsLogTools.LogLevels.ERROR, message.Trim());
-
-            OnErrorMessage(new MessageEventArgs(message));
 
             ErrorMessage = string.Copy(message);
         }
@@ -1273,11 +1287,11 @@ namespace DataPackage_Archive_Manager
             {
                 // Keys in this dictionary are data package IDs.  Values are some of the expected filenames that MyEMSL should return
                 var dataPackageIDs = new Dictionary<int, List<string>>();
-                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 593,  new List<string> {"PX_Submission_2015-10-09_16-01.px"});
-                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 721,  new List<string> {"AScore_AnalysisSummary.txt", "JobParameters_995425.xml", "T_Filtered_Results.txt"});
-                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1034, new List<string> {"MasterWorkflowSyn.xml", "T_Reporter_Ions_Typed.txt"});
-                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1376, new List<string> {"Concatenated_msgfdb_syn_plus_ascore.txt", "AScore_CID_0.5Da_ETD_0.5Da_HCD_0.05Da.xml"});
-                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1512, new List<string> {"AScore_CID_0.5Da_ETD_0.5Da_HCD_0.05Da.xml", "Job_to_Dataset_Map.txt"});
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 593, new List<string> { "PX_Submission_2015-10-09_16-01.px" });
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 721, new List<string> { "AScore_AnalysisSummary.txt", "JobParameters_995425.xml", "T_Filtered_Results.txt" });
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1034, new List<string> { "MasterWorkflowSyn.xml", "T_Reporter_Ions_Typed.txt" });
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1376, new List<string> { "Concatenated_msgfdb_syn_plus_ascore.txt", "AScore_CID_0.5Da_ETD_0.5Da_HCD_0.05Da.xml" });
+                VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1512, new List<string> { "AScore_CID_0.5Da_ETD_0.5Da_HCD_0.05Da.xml", "Job_to_Dataset_Map.txt" });
 
                 var dataPackageListInfo = new DataPackageListInfo();
 
@@ -1286,18 +1300,18 @@ namespace DataPackage_Archive_Manager
                 {
                     dataPackageListInfo.AddDataPackage(dataPkg.Key);
                 }
-                
+
                 var archiveFiles = dataPackageListInfo.FindFiles("*");
 
                 if (archiveFiles.Count == 0)
                 {
                     ReportError("MyEMSL did not return any files for the known data packages (" + dataPackageIDs.First().Key + "-" + dataPackageIDs.Last().Key + "); " +
-                                "the Simple Search service must be disabled or broken at present.", true);                    
+                                "the Simple Search service must be disabled or broken at present.", true);
                     return false;
                 }
 
                 var dataPkgMissingFiles = new Dictionary<int, List<string>>();
- 
+
                 // Check for known files from each of the data packages
                 foreach (var dataPkg in dataPackageIDs)
                 {
@@ -1452,12 +1466,12 @@ namespace DataPackage_Archive_Manager
                 Utilities.Logout(cookieJar);
                 return false;
             }
-            
+
         }
 
         private eUploadStatus VerifyUploadStatusWork(
-            MyEMSLStatusCheck statusChecker, 
-            KeyValuePair<int, udtMyEMSLStatusInfo> statusInfo, 
+            MyEMSLStatusCheck statusChecker,
+            KeyValuePair<int, udtMyEMSLStatusInfo> statusInfo,
             CookieContainer cookieJar,
             DataPackageListInfo dataPackageInfoCache)
         {
@@ -1559,7 +1573,7 @@ namespace DataPackage_Archive_Manager
                                     clsLogTools.LogLevels.DEBUG);
                 }
 
-                if (!verified && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 5*24)
+                if (!verified && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 5 * 24)
                 {
                     ReportError(
                         "Data package " + statusInfo.Value.DataPackageID + " has not been validated in the archive after 5 days; see " +
@@ -1585,6 +1599,9 @@ namespace DataPackage_Archive_Manager
                 {
                     return eUploadStatus.Success;
                 }
+
+                if (diDataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
 
                 // Construct the metadata file path
                 // For example, \\protoapps\dataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
@@ -1633,15 +1650,7 @@ namespace DataPackage_Archive_Manager
             return eUploadStatus.Success;
         }
 
-        #region "Events"
-
-        public event MessageEventHandler ErrorEvent;
-        public event MessageEventHandler MessageEvent;
-
-        #endregion
-
         #region "Event Handlers"
-
 
         private void m_ExecuteSP_DBErrorEvent(string Message)
         {
@@ -1681,17 +1690,7 @@ namespace DataPackage_Archive_Manager
             else
                 msg += ": " + e.ServerResponse;
 
-            ReportMessage(msg, clsLogTools.LogLevels.INFO);
-        }
-
-        public void OnErrorMessage(MessageEventArgs e)
-        {
-            ErrorEvent?.Invoke(this, e);
-        }
-
-        public void OnMessage(MessageEventArgs e)
-        {
-            MessageEvent?.Invoke(this, e);
+            ReportMessage(msg);
         }
 
         #endregion

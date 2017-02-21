@@ -1,5 +1,9 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.6261; February 21, 2017
+	- Updated PRISM.dll
+	- Update to .NET 4.5.2
+
 Version 1.0.6136; October 19, 2016
 	- Include EUS Proposal ID in the metadata file sent to MyEMSL
 
