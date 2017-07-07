@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DataPackage_Archive_Manager</RootNamespace>
     <AssemblyName>DataPackage_Archive_Manager</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
@@ -48,16 +48,13 @@
       <HintPath>Lib\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MyEMSLReader, Version=1.1.5946.29362, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="MyEMSLReader, Version=1.3.6397.29339, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Lib\MyEMSLReader.dll</HintPath>
     </Reference>
-    <Reference Include="Pacifica.Core, Version=2.0.5302.17745, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Pacifica.Core, Version=2.0.6397.29260, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Lib\Pacifica.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="PRISM">
-      <HintPath>Lib\PRISM.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -68,9 +65,7 @@
   <ItemGroup>
     <Compile Include="clsDataPackageInfo.cs" />
     <Compile Include="clsLogTools.cs" />
-    <Compile Include="clsParseCommandLine.cs" />
     <Compile Include="clsDataPackageArchiver.cs" />
-    <Compile Include="EventArgs.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -79,6 +74,11 @@
     <None Include="Logging.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="PRISM-Library">
+      <Version>1.0.6</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
