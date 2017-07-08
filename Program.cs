@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using PRISM;
 
 namespace DataPackage_Archive_Manager
@@ -12,12 +13,12 @@ namespace DataPackage_Archive_Manager
     // E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com
     // Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/
     // -------------------------------------------------------------------------------
-    // 
+    //
 
-    internal class Program
+    internal static class Program
     {
 
-        public const string PROGRAM_DATE = "March 13, 2017";
+        public const string PROGRAM_DATE = "July 7, 2017";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -35,7 +36,7 @@ namespace DataPackage_Archive_Manager
 
         public static int Main(string[] args)
         {
-            var objParseCommandLine = new FileProcessor.clsParseCommandLine();
+            var parseCommandLine = new clsParseCommandLine();
 
             mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
             mLogLevel = clsLogTools.LogLevels.INFO;
@@ -51,15 +52,15 @@ namespace DataPackage_Archive_Manager
             {
                 var success = false;
 
-                if (objParseCommandLine.ParseCommandLine())
+                if (parseCommandLine.ParseCommandLine())
                 {
-                    if (SetOptionsUsingCommandLineParameters(objParseCommandLine))
+                    if (SetOptionsUsingCommandLineParameters(parseCommandLine))
                         success = true;
                 }
 
                 if (!success ||
-                    objParseCommandLine.NeedToShowHelp ||
-                    objParseCommandLine.ParameterCount + objParseCommandLine.NonSwitchParameterCount == 0 ||
+                    parseCommandLine.NeedToShowHelp ||
+                    parseCommandLine.ParameterCount + parseCommandLine.NonSwitchParameterCount == 0 ||
                     mDataPkgIDList.Length == 0)
                 {
                     ShowProgramHelp();
@@ -107,7 +108,7 @@ namespace DataPackage_Archive_Manager
 
                         if (lstDataPkgIDs.Count == 0)
                         {
-                            // Data Package IDs not defined							
+                            // Data Package IDs not defined
                             ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
                             ShowProgramHelp();
                             return -2;
@@ -116,7 +117,7 @@ namespace DataPackage_Archive_Manager
 
                     // Upload new data, then verify previously updated data
                     success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
-                    
+
                 }
 
                 if (!success)
@@ -129,6 +130,7 @@ namespace DataPackage_Archive_Manager
             {
                 Console.WriteLine("Error occurred in Program->Main: " + Environment.NewLine + ex.Message);
                 Console.WriteLine(ex.StackTrace);
+                Thread.Sleep(1500);
                 return -1;
             }
 
@@ -140,7 +142,7 @@ namespace DataPackage_Archive_Manager
             return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
         }
 
-        private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
+        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine parseCommandLine)
         {
             // Returns True if no problems; otherwise, returns false
             var lstValidParameters = new List<string> { "D", "Preview", "V", "Trace", "Debug", "DB", "SkipCheckExisting" };
@@ -148,10 +150,10 @@ namespace DataPackage_Archive_Manager
             try
             {
                 // Make sure no invalid parameters are present
-                if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
+                if (parseCommandLine.InvalidParametersPresent(lstValidParameters))
                 {
                     var badArguments = new List<string>();
-                    foreach (var item in objParseCommandLine.InvalidParameters(lstValidParameters))
+                    foreach (var item in parseCommandLine.InvalidParameters(lstValidParameters))
                     {
                         badArguments.Add("/" + item);
                     }
@@ -161,14 +163,14 @@ namespace DataPackage_Archive_Manager
                     return false;
                 }
 
-                // Query objParseCommandLine to see if various parameters are present						
-                if (objParseCommandLine.NonSwitchParameterCount > 0)
+                // Query parseCommandLine to see if various parameters are present
+                if (parseCommandLine.NonSwitchParameterCount > 0)
                 {
-                    mDataPkgIDList = objParseCommandLine.RetrieveNonSwitchParameter(0);
+                    mDataPkgIDList = parseCommandLine.RetrieveNonSwitchParameter(0);
                 }
 
                 string strValue;
-                if (objParseCommandLine.RetrieveValueForParameter("D", out strValue))
+                if (parseCommandLine.RetrieveValueForParameter("D", out strValue))
                 {
                     if (string.IsNullOrWhiteSpace(strValue))
                         ShowErrorMessage("/D does not have a date; date threshold will not be used");
@@ -185,7 +187,7 @@ namespace DataPackage_Archive_Manager
 
                 }
 
-                if (objParseCommandLine.IsParameterPresent("Preview"))
+                if (parseCommandLine.IsParameterPresent("Preview"))
                 {
                     mPreviewMode = true;
                 }
@@ -199,17 +201,19 @@ namespace DataPackage_Archive_Manager
                 {
                     mTraceMode = true;
                 }
+
+                if (parseCommandLine.IsParameterPresent("V"))
                 {
                     mVerifyOnly = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("Debug"))
+                if (parseCommandLine.IsParameterPresent("Debug"))
                 {
                     mLogLevel = clsLogTools.LogLevels.DEBUG;
-
+                    mTraceMode = true;
                 }
 
-                if (objParseCommandLine.RetrieveValueForParameter("DB", out strValue))
+                if (parseCommandLine.RetrieveValueForParameter("DB", out strValue))
                 {
                     if (string.IsNullOrWhiteSpace(strValue))
                         ShowErrorMessage("/DB does not have a value; not overriding the connection string");
@@ -307,8 +311,8 @@ namespace DataPackage_Archive_Manager
                 Console.WriteLine("Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/");
                 Console.WriteLine();
 
-                // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
-                System.Threading.Thread.Sleep(1500);
+                // Delay for 1500 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
+                Thread.Sleep(1500);
 
             }
             catch (Exception ex)
@@ -370,6 +374,7 @@ namespace DataPackage_Archive_Manager
         {
             Console.WriteLine(strMessage);
         }
+
         private static void Archiver_WarningEvent(string strMessage)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
