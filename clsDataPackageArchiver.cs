@@ -80,8 +80,8 @@ namespace DataPackage_Archive_Manager
 
         #region "Class variables"
 
-        private PRISM.clsExecuteDatabaseSP m_ExecuteSP;
-        private Upload mMyEMSLUploader;
+        private readonly clsExecuteDatabaseSP m_ExecuteSP;
+        private readonly Upload mMyEMSLUploader;
         private DateTime mLastStatusUpdate;
 
         #endregion
@@ -122,6 +122,20 @@ namespace DataPackage_Archive_Manager
         {
             DBConnectionString = connectionString;
             LogLevel = logLevel;
+
+            m_ExecuteSP = new clsExecuteDatabaseSP(DBConnectionString);
+            RegisterEvents(m_ExecuteSP);
+
+            var pacificaConfig = new Configuration();
+
+            mMyEMSLUploader = new Upload(pacificaConfig);
+
+            // Attach the events
+            mMyEMSLUploader.DebugEvent += myEMSLUpload_DebugEvent;
+            mMyEMSLUploader.ErrorEvent += myEMSLUpload_ErrorEvent;
+
+            mMyEMSLUploader.StatusUpdate += myEMSLUpload_StatusUpdate;
+            mMyEMSLUploader.UploadCompleted += myEMSLUpload_UploadCompleted;
 
             Initialize();
         }
@@ -551,19 +565,6 @@ namespace DataPackage_Archive_Manager
             // Make initial log entry
             var msg = "=== Started Data Package Archiver V" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " ===== ";
             clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, clsLogTools.LogLevels.INFO, msg);
-
-            m_ExecuteSP = new PRISM.clsExecuteDatabaseSP(DBConnectionString);
-            m_ExecuteSP.DBErrorEvent += m_ExecuteSP_DBErrorEvent;
-
-            mMyEMSLUploader = new Upload();
-
-            // Attach the events			
-            mMyEMSLUploader.DebugEvent += myEMSLUpload_DebugEvent;
-            mMyEMSLUploader.ErrorEvent += myEMSLUpload_ErrorEvent;
-
-            mMyEMSLUploader.StatusUpdate += myEMSLUpload_StatusUpdate;
-            mMyEMSLUploader.UploadCompleted += myEMSLUpload_UploadCompleted;
-
 
         }
 
