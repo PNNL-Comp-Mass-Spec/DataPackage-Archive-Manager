@@ -91,14 +91,15 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Gigasax.DMS_Data_Package database
         /// </summary>
-        public string DBConnectionString
-        { get; }
+        public string DBConnectionString { get; }
 
-        public string ErrorMessage
-        { get; private set; }
+        public string ErrorMessage { get; private set; }
 
-        public bool PreviewMode
-        { get; set; }
+        public bool PreviewMode { get; set; }
+
+        public bool SkipCheckExisting { get; set; }
+
+        public bool TraceMode { get; set; }
 
         /// <summary>
         /// Logging level; range is 1-5, where 5 is the most verbose
@@ -1282,6 +1283,12 @@ namespace DataPackage_Archive_Manager
         /// <returns></returns>
         public bool VerifyKnownMyEMSLSearchResults()
         {
+
+            if (SkipCheckExisting)
+            {
+                OnWarningEvent("Skipping check for known data package files");
+                return true;
+            }
 
             try
             {

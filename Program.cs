@@ -29,6 +29,8 @@ namespace DataPackage_Archive_Manager
         private static DateTime mDateThreshold;
 
         private static bool mPreviewMode;
+        private static bool mSkipCheckExisting;
+        private static bool mTraceMode;
         private static bool mVerifyOnly;
 
         public static int Main(string[] args)
@@ -41,6 +43,8 @@ namespace DataPackage_Archive_Manager
             mDataPkgIDList = string.Empty;
             mDateThreshold = DateTime.MinValue;
             mPreviewMode = false;
+            mSkipCheckExisting = false;
+            mTraceMode = false;
             mVerifyOnly = false;
 
             try
@@ -73,7 +77,11 @@ namespace DataPackage_Archive_Manager
                     return 0;
                 }
 
-                var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel);
+                var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel)
+                {
+                    SkipCheckExisting = mSkipCheckExisting,
+                    TraceMode = mTraceMode
+                };
 
                 // Attach the events
                 archiver.DebugEvent += Archiver_DebugEvent;
@@ -135,7 +143,7 @@ namespace DataPackage_Archive_Manager
         private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
         {
             // Returns True if no problems; otherwise, returns false
-            var lstValidParameters = new List<string> { "D", "Preview", "V", "Debug", "DB" };
+            var lstValidParameters = new List<string> { "D", "Preview", "V", "Trace", "Debug", "DB", "SkipCheckExisting" };
 
             try
             {
@@ -182,7 +190,15 @@ namespace DataPackage_Archive_Manager
                     mPreviewMode = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("V"))
+                if (parseCommandLine.IsParameterPresent("SkipCheckExisting"))
+                {
+                    mSkipCheckExisting = true;
+                }
+
+                if (parseCommandLine.IsParameterPresent("Trace"))
+                {
+                    mTraceMode = true;
+                }
                 {
                     mVerifyOnly = true;
                 }
@@ -263,7 +279,9 @@ namespace DataPackage_Archive_Manager
                 Console.WriteLine();
                 Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
-                Console.WriteLine(" DataPackageIDList [/D:DateThreshold] [/Preview] [/V] [/DB:ConnectionString] [/Debug]");
+                Console.WriteLine(
+                    " DataPackageIDList [/D:DateThreshold] [/Preview] [/V] " +
+                    "[/DB:ConnectionString] [/Trace] [/Debug]");
 
                 Console.WriteLine();
                 Console.WriteLine("DataPackageIDList can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages");
@@ -272,12 +290,14 @@ namespace DataPackage_Archive_Manager
                 Console.WriteLine("Use /D to specify a date threshold for finding modified data packages; if a data package does not have any files modified on/after the /D date, then the data package will not be uploaded to MyEMSL");
                 Console.WriteLine();
                 Console.WriteLine("Use /Preview to preview any files that would be uploaded");
-                Console.WriteLine("Note that when uploading files this program must be run as user pnl\\svc-dms");
                 Console.WriteLine("");
                 Console.WriteLine("Use /V to verify recently uploaded data packages and skip looking for new/changed files");
                 Console.WriteLine("Use /DB to override the default connection string of " + clsDataPackageArchiver.CONNECTION_STRING);
                 Console.WriteLine();
-                Console.WriteLine("Use /Debug to enable the display (and logging) of debug messages");
+                Console.WriteLine("Use /SkipCheckExisting to skip the check for data package files that are known to exist in MyEMSL and should be visible by a metadata query; if this switch is used, you risk pushing duplicate data files into MyEMSL");
+                Console.WriteLine();
+                Console.WriteLine("Use /Trace to show additional log messages");
+                Console.WriteLine("Use /Debug to enable the display (and logging) of debug messages; auto-enables /Trace");
                 Console.WriteLine();
                 Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013");
                 Console.WriteLine("Version: " + GetAppVersion());
