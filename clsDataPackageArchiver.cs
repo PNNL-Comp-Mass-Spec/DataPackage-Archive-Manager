@@ -580,8 +580,9 @@ namespace DataPackage_Archive_Manager
 
                     var sql = new StringBuilder();
 
-                    sql.Append(" SELECT ID, Name, Owner, EUS_Person_ID, EUS_Proposal_ID AS EUS_Proposal_ID, Created, " +
-                               " Package_File_Folder, Share_Path, Local_Path, MyEMSL_Uploads " +
+                    sql.Append(" SELECT ID, Name, Owner, Instrument, " +
+                                  " EUS_Person_ID, EUS_Proposal_ID, EUS_Instrument_ID, Created, " +
+                                  " Package_File_Folder, Share_Path, Local_Path, MyEMSL_Uploads " +
                                " FROM V_Data_Package_Export");
 
                     if (lstDataPkgIDs.Count > 0)
@@ -605,28 +606,32 @@ namespace DataPackage_Archive_Manager
 
                     sql.Append(" ORDER BY ID");
 
-                    var cmd = new SqlCommand(sql.ToString(), cnDB);
-                    var reader = cmd.ExecuteReader();
-
-                    while (reader.Read())
+                    using (var cmd = new SqlCommand(sql.ToString(), cnDB))
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        var dataPkgID = reader.GetInt32(0);
-
-                        var dataPkgInfo = new clsDataPackageInfo(dataPkgID)
+                        while (reader.Read())
                         {
-                            Name = GetDBString(reader, "Name"),
-                            OwnerPRN = GetDBString(reader, "Owner"),
-                            OwnerEUSID = GetDBInt(reader, "EUS_Person_ID"),
-                            EUSProposalID = GetDBString(reader, "EUS_Proposal_ID"),
-                            Created = GetDBDate(reader, "Created"),
-                            FolderName = GetDBString(reader, "Package_File_Folder"),
-                            SharePath = GetDBString(reader, "Share_Path"),
-                            LocalPath = GetDBString(reader, "Local_Path"),
-                            MyEMSLUploads = GetDBInt(reader, "MyEMSL_Uploads")
-                        };
+                            var dataPkgID = reader.GetInt32(0);
 
-                        lstDataPkgInfo.Add(dataPkgInfo);
+                            var dataPkgInfo = new clsDataPackageInfo(dataPkgID)
+                            {
+                                Name = GetDBString(reader, "Name"),
+                                OwnerPRN = GetDBString(reader, "Owner"),
+                                OwnerEUSID = GetDBInt(reader, "EUS_Person_ID"),
+                                EUSProposalID = GetDBString(reader, "EUS_Proposal_ID"),
+                                EUSInstrumentID = GetDBInt(reader, "EUS_Instrument_ID"),
+                                InstrumentName = GetDBString(reader, "Instrument"),
+                                Created = GetDBDate(reader, "Created"),
+                                FolderName = GetDBString(reader, "Package_File_Folder"),
+                                SharePath = GetDBString(reader, "Share_Path"),
+                                LocalPath = GetDBString(reader, "Local_Path"),
+                                MyEMSLUploads = GetDBInt(reader, "MyEMSL_Uploads")
+                            };
+
+                            lstDataPkgInfo.Add(dataPkgInfo);
+                        }
                     }
+
                 }
 
                 return lstDataPkgInfo;
@@ -1006,6 +1011,26 @@ namespace DataPackage_Archive_Manager
                     else
                     {
                         uploadMetadata.EUSProposalID = dataPkgInfo.EUSProposalID;
+                    }
+
+                    if (dataPkgInfo.EUSInstrumentID <= 0)
+                    {
+                        OnWarningEvent("Data package does not have an associated EUS Instrument ID; using " + Upload.UNKNOWN_INSTRUMENT_EUS_INSTRUMENT_ID);
+                        uploadMetadata.EUSInstrumentID = Upload.UNKNOWN_INSTRUMENT_EUS_INSTRUMENT_ID;
+                    }
+                    else
+                    {
+                        uploadMetadata.EUSInstrumentID = dataPkgInfo.EUSInstrumentID;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(dataPkgInfo.InstrumentName))
+                    {
+                        OnWarningEvent("Data package does not have an associated Instrument Name; using " + Upload.UNKNOWN_INSTRUMENT_NAME);
+                        uploadMetadata.DMSInstrumentName = Upload.UNKNOWN_INSTRUMENT_NAME;
+                    }
+                    else
+                    {
+                        uploadMetadata.DMSInstrumentName = dataPkgInfo.InstrumentName;
                     }
 
                     // Instantiate the metadata object

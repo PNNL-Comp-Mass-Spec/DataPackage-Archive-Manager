@@ -4,11 +4,13 @@ namespace DataPackage_Archive_Manager
 {
     class clsDataPackageInfo
     {
-        public int ID { get; private set; }			// Data Package ID
+        public int ID { get; }			            // Data Package ID
         public string Name { get; set; }            // Data Package Name
         public string OwnerPRN { get; set; }        // Data Package Owner's username
         public int OwnerEUSID { get; set; }         // EUS ID of the data package owner
-        public string EUSProposalID { get; set; }      // EUS Proposal ID (most common one in use by the datasets or jobs associated with the data package)
+        public string EUSProposalID { get; set; }   // EUS Proposal ID (most common one in use by the datasets or jobs associated with the data package)
+        public int EUSInstrumentID { get; set; }    // EUS Instrument ID (most common one in use by the datasets or jobs associated with the data package)
+        public string InstrumentName { get; set; }  // Instrument Name (most common one in use by the datasets or jobs associated with the data package)
         public DateTime Created { get; set; }
         public string FolderName { get; set; }		// Example: 894_CPTAC_Batch4_Global_CompRef
         public string SharePath { get; set; }		// Example: \\protoapps\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
@@ -25,6 +27,7 @@ namespace DataPackage_Archive_Manager
             OwnerPRN = string.Empty;
             OwnerEUSID = 0;
             EUSProposalID = string.Empty;
+            InstrumentName = string.Empty;
             Created = DateTime.Now;
             FolderName = string.Empty;
             SharePath = string.Empty;
