@@ -1422,6 +1422,7 @@ namespace DataPackage_Archive_Manager
                 const int DATA_PACKAGE_GROUP_SIZE = 5;
 
                 var statusChecker = new MyEMSLStatusCheck();
+                statusChecker.ErrorEvent += statusChecker_ErrorEvent;
 
                 for (var i = 0; i < distinctDataPackageIDs.Count; i += DATA_PACKAGE_GROUP_SIZE)
                 {
@@ -1436,7 +1437,7 @@ namespace DataPackage_Archive_Manager
                         var currentDataPackageID = distinctDataPackageIDs[j];
                         dataPackageInfoCache.AddDataPackage(currentDataPackageID);
 
-                        // Find all of the URIs for this data package					
+                        // Find all of the URIs for this data package
                         foreach (
                             var uriItem in
                                 (from item in dctURIs where item.Value.DataPackageID == currentDataPackageID select item)
@@ -1488,6 +1489,7 @@ namespace DataPackage_Archive_Manager
                 // since historically there were 7 steps to the ingest process
                 var ingestStepsCompleted = statusChecker.IngestStepCompletionCount(percentComplete);
 
+                var dataPackageAndEntryId = "Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID;
 
                 if (lookupError)
                 {
@@ -1501,26 +1503,29 @@ namespace DataPackage_Archive_Manager
                     return eUploadStatus.VerificationError;
                 }
 
-                // Look for any steps in error
-                if (statusChecker.HasStepError(xmlServerResponse, out errorMessage))
+                if (serverResponse.TryGetValue("state", out var ingestState))
                 {
-                    ReportError("Data package " + statusInfo.Value.DataPackageID + " has a step reporting an error" + "; " + errorMessage, true);
-                    Utilities.Logout(cookieJar);
+                    if (string.Equals((string)ingestState, "failed", StringComparison.InvariantCultureIgnoreCase) ||
+                        !string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        // Error should have already been logged during the call to GetIngestStatus
+                        if (string.IsNullOrWhiteSpace(errorMessage))
+                        {
+                            errorMessage = "Ingest failed; unknown reason";
+                            ReportError(errorMessage);
+                        }
+
+                        return eUploadStatus.VerificationError;
+                    }
+
+                }
+                else
+                {
+                    ReportError("State parameter not found in ingest status; see " + statusInfo.Value.StatusURI);
                     return eUploadStatus.VerificationError;
                 }
 
-                string statusMessage;
-
-                // First check step 5 (Available in MyEMSL)
-
-                var available = statusChecker.IngestStepCompleted(
-                    xmlServerResponse,
-                    MyEMSLStatusCheck.StatusStep.Available,
-                    out statusMessage,
-                    out errorMessage);
-
-
-                if (!available)
+                if (percentComplete < 100)
                 {
                     if (DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 24)
                     {
@@ -1537,45 +1542,18 @@ namespace DataPackage_Archive_Manager
 
                 if (archiveFiles.Count > 0)
                 {
-                    ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is available in MyEMSL Elastic Search",
+                    ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is visible in MyEMSL Metadata",
                                     clsLogTools.LogLevels.DEBUG);
                 }
                 else
                 {
-                    ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is not yet available in MyEMSL Elastic Search",
+                    ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is not yet visible in MyEMSL Metadata",
                                     clsLogTools.LogLevels.DEBUG);
+
+                    // Update values in the DB
+                    UpdateMyEMSLUploadStatus(statusInfo.Value, verified: false);
 
                     // Even though it is not yet available, we report Success
-                    return eUploadStatus.Success;
-                }
-
-                // Next check step 6 (Archived and Sha-1 hash values checked)
-
-                var verified = statusChecker.IngestStepCompleted(
-                    xmlServerResponse,
-                    MyEMSLStatusCheck.StatusStep.Archived,
-                    out statusMessage,
-                    out errorMessage);
-
-                if (verified)
-                {
-                    ReportMessage("Data package " + statusInfo.Value.DataPackageID + " has been verified against expected hash values",
-                                    clsLogTools.LogLevels.DEBUG);
-                }
-
-                if (!verified && DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 5 * 24)
-                {
-                    ReportError(
-                        "Data package " + statusInfo.Value.DataPackageID + " has not been validated in the archive after 5 days; see " +
-                        statusInfo.Value.StatusURI, true);
-                }
-
-
-                // Update values in the DB
-                UpdateMyEMSLUploadStatus(statusInfo.Value, verified);
-
-                if (!verified)
-                {
                     return eUploadStatus.Success;
                 }
 
@@ -1587,6 +1565,9 @@ namespace DataPackage_Archive_Manager
 
                 if (!diDataPkg.Exists)
                 {
+                    // Update values in the DB
+                    UpdateMyEMSLUploadStatus(statusInfo.Value, verified: false);
+
                     return eUploadStatus.Success;
                 }
 
@@ -1598,6 +1579,7 @@ namespace DataPackage_Archive_Manager
                 var metadataFilePath = Path.Combine(diDataPkg.Parent.FullName,
                                                     Utilities.GetMetadataFilenameForJob(
                                                         statusInfo.Value.DataPackageID.ToString(CultureInfo.InvariantCulture)));
+
                 var fiMetadataFile = new FileInfo(metadataFilePath);
 
                 if (fiMetadataFile.Exists)
@@ -1615,6 +1597,9 @@ namespace DataPackage_Archive_Manager
                         fiMetadataFile.Delete();
                     }
                 }
+
+                // Update values in the DB
+                UpdateMyEMSLUploadStatus(statusInfo.Value, verified: true);
 
             }
             catch (Exception ex)
@@ -1642,8 +1627,6 @@ namespace DataPackage_Archive_Manager
 
         #region "Event Handlers"
 
-        private void m_ExecuteSP_DBErrorEvent(string Message)
-        {
             ReportError("Stored procedure execution error: " + Message, true);
         }
 
