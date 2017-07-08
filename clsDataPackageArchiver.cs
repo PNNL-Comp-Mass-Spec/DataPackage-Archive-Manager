@@ -1411,27 +1411,6 @@ namespace DataPackage_Archive_Manager
                 return true;
             }
 
-            // Call the testauth service to obtain a cookie for this session
-            var authURL = Configuration.TestAuthUri;
-            var auth = new Auth(new Uri(authURL));
-
-            CookieContainer cookieJar;
-
-            try
-            {
-                if (!auth.GetAuthCookies(out cookieJar))
-                {
-                    var msg = "Auto-login to " + Configuration.TestAuthUri + " failed authentication";
-                    ReportError(msg);
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                ReportError("Exception logging in to " + Configuration.TestAuthUri + " (VerifyUploadStatus): " + ex.Message, true);
-                return false;
-            }
-
             try
             {
 
@@ -1471,21 +1450,18 @@ namespace DataPackage_Archive_Manager
 
                     foreach (var statusInfo in dctURIsInGroup)
                     {
-                        var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, cookieJar, dataPackageInfoCache);
+                        var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache);
 
                         if (eResult == eUploadStatus.CriticalError)
                             return false;
                     }
                 }
 
-
-                Utilities.Logout(cookieJar);
                 return true;
             }
             catch (Exception ex)
             {
                 ReportError("Exception verifying data package upload status (VerifyUploadStatus): " + ex.Message, true);
-                Utilities.Logout(cookieJar);
                 return false;
             }
 
@@ -1494,7 +1470,6 @@ namespace DataPackage_Archive_Manager
         private eUploadStatus VerifyUploadStatusWork(
             MyEMSLStatusCheck statusChecker,
             KeyValuePair<int, udtMyEMSLStatusInfo> statusInfo,
-            CookieContainer cookieJar,
             DataPackageListInfo dataPackageInfoCache)
         {
             var exceptionCount = 0;
@@ -1503,33 +1478,26 @@ namespace DataPackage_Archive_Manager
             {
                 // Obtain the Status XML
 
-                bool lookupError;
-                string errorMessage;
+                var serverResponse = statusChecker.GetIngestStatus(
+                    statusInfo.Value.StatusURI,
+                    out var percentComplete,
+                    out var lookupError,
+                    out var errorMessage);
 
-                var xmlServerResponse = statusChecker.GetIngestStatus(statusInfo.Value.StatusURI, cookieJar, out lookupError, out errorMessage);
+                // Convert the percent complete value (between 0 and 100) to a number between 0 and 7
+                // since historically there were 7 steps to the ingest process
+                var ingestStepsCompleted = statusChecker.IngestStepCompletionCount(percentComplete);
+
 
                 if (lookupError)
                 {
-                    if (errorMessage.StartsWith(MyEMSLStatusCheck.PERMISSIONS_ERROR))
-                    {
-                        ReportError("Error looking up archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
-                                    statusInfo.Value.EntryID + "; " + errorMessage);
-                        Utilities.Logout(cookieJar);
-                        return eUploadStatus.CriticalError;
-                    }
-
-
-                    ReportError("Error looking up archive status for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
-                                statusInfo.Value.EntryID + "; " + errorMessage, true);
-                    Utilities.Logout(cookieJar);
+                    ReportError("Error looking up archive status for " + dataPackageAndEntryId + "; " + errorMessage, true);
                     return eUploadStatus.VerificationError;
                 }
 
-                if (string.IsNullOrEmpty(xmlServerResponse))
+                if (serverResponse.Keys.Count == 0)
                 {
-                    ReportError("Empty XML server response for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
-                              statusInfo.Value.EntryID + "; " + errorMessage);
-                    Utilities.Logout(cookieJar);
+                    ReportError("Empty JSON server response for " + dataPackageAndEntryId);
                     return eUploadStatus.VerificationError;
                 }
 
