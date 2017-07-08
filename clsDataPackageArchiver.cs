@@ -977,7 +977,7 @@ namespace DataPackage_Archive_Manager
                     // Upload the files
                     ReportMessage("Uploading " + lstUnmatchedFiles.Count + " new/changed files for Data Package " + dataPkgInfo.ID);
 
-                    var uploadMetadata = new Upload.udtUploadMetadata();
+                    var uploadMetadata = new Upload.UploadMetadata();
                     uploadMetadata.Clear();
 
                     uploadMetadata.DataPackageID = dataPkgInfo.ID;
