@@ -35,8 +35,8 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         /// <remarks>
         /// Since data package uploads always work with the entire data package folder and all subfolders,
-        ///   this a maximum cap on the number of files that will be stored in MyEMSL for a given data package
-        /// If a data package has more than 600 files, then zip up groups of files before archiving to MyEMSL
+        ///   there is a maximum cap on the number of files that will be stored in MyEMSL for a given data package
+        /// If a data package has more than 600 files, the data needs to be manually zipped before this manager will auto-push into MyEMSL
         /// </remarks>
         private const int MAX_FILES_TO_ARCHIVE = 600;
 
@@ -325,7 +325,7 @@ namespace DataPackage_Archive_Manager
                     subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length + 1));
                 }
 
-                // Look for this file in MyEMSL				
+                // Look for this file in MyEMSL
                 var archiveFiles = dataPackageInfoCache.FindFiles(fiLocalFile.Name, subDir, dataPkgInfo.ID, recurse: false);
 
                 if (diDataPkg.Parent == null)
@@ -816,13 +816,14 @@ namespace DataPackage_Archive_Manager
                         // If known results were not found, we don't want to risk pushing 1000's of data package files into MyEMSL when those files likely are already stored in MyEMSL
                         if (!success)
                         {
-                            ReportMessage("Aborting processing of data packages since Simple Search is not available");
+                            ReportMessage("Aborting processing of data packages since the Metadata server is not available");
                             return false;
                         }
 
                         dtLastSimpleSearchVerify = DateTime.UtcNow;
 
                     }
+
                     // Pre-populate lstDataPackageInfoCache with the files for the current group
                     ReportMessage("Querying MyEMSL for " + dataPkgGroup.Count + " data packages in group " + groupNumber + " of " + lstDataPkgGroups.Count);
                     dataPackageInfoCache.RefreshInfo();
@@ -947,12 +948,12 @@ namespace DataPackage_Archive_Manager
                     return true;
                 }
 
-                // Check whether the MyEMSL Simple Search query returned results
+                // Check whether the MyEMSL Metadata query returned results
                 // If it did not, either this is a new data package, or we had a query error
                 var archiveFileCountExisting = dataPackageInfoCache.FindFiles("*", "", dataPkgInfo.ID).Count;
                 if (archiveFileCountExisting == 0)
                 {
-                    // Simple Search does not know about this data package (or the files reported by it were filtered out by the reader)
+                    // Data package not in MyEMSL (or the files reported by it were filtered out by the reader)
                     // See if DMS is tracking that this data package was, in fact, uploaded to DMS at some point in time
                     // This is tracked by table T_MyEMSL_Uploads, examining rows where ErrorCode is 0 and FileCountNew or FileCountUpdated are positive
 
@@ -962,12 +963,12 @@ namespace DataPackage_Archive_Manager
 
                         ReportMessage(
                             "Data package " + dataPkgInfo.ID +
-                            " was previously uploaded to MyEMSL, yet Simple Search did not return any files for this dataset.  Skipping this data package to prevent the addition of duplicate files to MyEMSL",
+                            " was previously uploaded to MyEMSL, yet the Metadata query did not return any files for this dataset.  Skipping this data package to prevent the addition of duplicate files to MyEMSL",
                             clsLogTools.LogLevels.ERROR, logToDB);
+
                         return false;
                     }
                 }
-
 
                 if (PreviewMode)
                 {
@@ -1304,7 +1305,7 @@ namespace DataPackage_Archive_Manager
                 if (archiveFiles.Count == 0)
                 {
                     ReportError("MyEMSL did not return any files for the known data packages (" + dataPackageIDs.First().Key + "-" + dataPackageIDs.Last().Key + "); " +
-                                "the Simple Search service must be disabled or broken at present.", true);
+                                "the Metadata service must be disabled or broken at present.", true);
                     return false;
                 }
 
@@ -1390,7 +1391,7 @@ namespace DataPackage_Archive_Manager
             try
             {
 
-                // Confirm that the data packages are visible in Elastic Search
+                // Confirm that the data packages are visible in MyEMSL Metadata
                 // To avoid obtaining too many results from MyEMSL, process the data packages in dctURIs in groups, 5 at a time
                 // First construct a unique list of the Data Package IDs in dctURIs
 
