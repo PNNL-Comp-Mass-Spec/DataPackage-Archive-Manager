@@ -110,8 +110,7 @@ namespace DataPackage_Archive_Manager
         /// WARN = 3,
         /// ERROR = 2,
         /// FATAL = 1</remarks>
-        public clsLogTools.LogLevels LogLevel
-        { get; }
+        public clsLogTools.LogLevels LogLevel { get; }
 
         #endregion
 
@@ -387,7 +386,7 @@ namespace DataPackage_Archive_Manager
 
             // File already in MyEMSL
             // Do not re-upload if it was stored in MyEMSL less than 6.75 days ago
-            if ((DateTime.UtcNow.Subtract(archiveFile.FileInfo.SubmissionTimeValue).TotalDays < 6.75))
+            if (DateTime.UtcNow.Subtract(archiveFile.FileInfo.SubmissionTimeValue).TotalDays < 6.75)
             {
                 return;
             }
@@ -434,7 +433,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        private DateTime GetDBDate(SqlDataReader reader, string columnName)
+        private DateTime GetDBDate(IDataRecord reader, string columnName)
         {
             var value = reader[columnName];
 
@@ -444,7 +443,7 @@ namespace DataPackage_Archive_Manager
             return (DateTime)value;
         }
 
-        private int GetDBInt(SqlDataReader reader, string columnName)
+        private int GetDBInt(IDataRecord reader, string columnName)
         {
             var value = reader[columnName];
 
@@ -454,7 +453,7 @@ namespace DataPackage_Archive_Manager
             return (int)value;
         }
 
-        private string GetDBString(SqlDataReader reader, string columnName)
+        private string GetDBString(IDataRecord reader, string columnName)
         {
             var value = reader[columnName];
 
@@ -464,7 +463,9 @@ namespace DataPackage_Archive_Manager
             return (string)value;
         }
 
-        private IEnumerable<clsDataPackageInfo> GetFilteredDataPackageInfoList(IEnumerable<clsDataPackageInfo> lstDataPkgInfo, IEnumerable<int> dataPkgGroup)
+        private IEnumerable<clsDataPackageInfo> GetFilteredDataPackageInfoList(
+            IEnumerable<clsDataPackageInfo> lstDataPkgInfo,
+            IEnumerable<int> dataPkgGroup)
         {
             var lstFilteredDataPkgInfo =
                 (from item in lstDataPkgInfo
@@ -568,7 +569,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        private List<clsDataPackageInfo> LookupDataPkgInfo(List<KeyValuePair<int, int>> lstDataPkgIDs)
+        private List<clsDataPackageInfo> LookupDataPkgInfo(IReadOnlyList<KeyValuePair<int, int>> lstDataPkgIDs)
         {
             var lstDataPkgInfo = new List<clsDataPackageInfo>();
 
@@ -701,9 +702,7 @@ namespace DataPackage_Archive_Manager
                         endID = item;
                     }
 
-                    int dataPkgIDStart;
-                    int dataPkgIDEnd;
-                    if (int.TryParse(startID, out dataPkgIDStart) && int.TryParse(endID, out dataPkgIDEnd))
+                    if (int.TryParse(startID, out var dataPkgIDStart) && int.TryParse(endID, out var dataPkgIDEnd))
                     {
                         var idRange = new KeyValuePair<int, int>(dataPkgIDStart, dataPkgIDEnd);
 
@@ -875,7 +874,10 @@ namespace DataPackage_Archive_Manager
             return false;
         }
 
-        private bool ProcessOneDataPackage(clsDataPackageInfo dataPkgInfo, DateTime dateThreshold, DataPackageListInfo dataPackageInfoCache)
+        private bool ProcessOneDataPackage(
+            clsDataPackageInfo dataPkgInfo,
+            DateTime dateThreshold,
+            DataPackageListInfo dataPackageInfoCache)
         {
             var success = false;
             var uploadInfo = new udtMyEMSLUploadInfo();
@@ -932,7 +934,12 @@ namespace DataPackage_Archive_Manager
                 }
 
                 // Compare the files to those already in MyEMSL to create a list of files to be uploaded
-                var lstUnmatchedFiles = FindDataPackageFilesToArchive(dataPkgInfo, diDataPkg, dateThreshold, dataPackageInfoCache, out uploadInfo);
+                var lstUnmatchedFiles = FindDataPackageFilesToArchive(
+                    dataPkgInfo,
+                    diDataPkg,
+                    dateThreshold,
+                    dataPackageInfoCache,
+                    out uploadInfo);
 
                 if (lstUnmatchedFiles.Count == 0)
                 {
@@ -1091,12 +1098,11 @@ namespace DataPackage_Archive_Manager
             clsLogTools.LogLevels logLevel = clsLogTools.LogLevels.INFO,
             bool logToDB = false)
         {
-            OnStatusEvent(message);
-
-            clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, logLevel, message);
 
             if (logToDB)
                 clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, logLevel, message.Trim());
+            else
+                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, logLevel, message);
 
             switch (logLevel)
             {
@@ -1149,8 +1155,6 @@ namespace DataPackage_Archive_Manager
             var success = ProcessDataPackages(lstDataPkgIDs, dateThreshold);
 
             // Verify uploaded data (even if success is false)
-            // We're setting PreviewMode again in case it was auto-set to True because the current user is not svc-dms
-            PreviewMode = previewMode;
             VerifyUploadStatus();
 
             return success;
@@ -1165,43 +1169,26 @@ namespace DataPackage_Archive_Manager
                 //Setup for execution of the stored procedure
                 var cmd = new SqlCommand();
                 {
-                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.CommandType = CommandType.StoredProcedure;
                     cmd.CommandText = SP_NAME_STORE_MYEMSL_STATS;
 
-                    cmd.Parameters.Add(new SqlParameter("@Return", System.Data.SqlDbType.Int));
-                    cmd.Parameters["@Return"].Direction = System.Data.ParameterDirection.ReturnValue;
+                    cmd.Parameters.Add(new SqlParameter("@Return", SqlDbType.Int)).Direction = ParameterDirection.ReturnValue;
 
-                    cmd.Parameters.Add(new SqlParameter("@DataPackageID", System.Data.SqlDbType.Int));
-                    cmd.Parameters["@DataPackageID"].Direction = System.Data.ParameterDirection.Input;
-                    cmd.Parameters["@DataPackageID"].Value = Convert.ToInt32(dataPkgInfo.ID);
+                    cmd.Parameters.Add(new SqlParameter("@DataPackageID", SqlDbType.Int)).Value = Convert.ToInt32(dataPkgInfo.ID);
 
-                    cmd.Parameters.Add(new SqlParameter("@Subfolder", System.Data.SqlDbType.VarChar, 128));
-                    cmd.Parameters["@Subfolder"].Direction = System.Data.ParameterDirection.Input;
-                    cmd.Parameters["@Subfolder"].Value = uploadInfo.SubDir;
+                    cmd.Parameters.Add(new SqlParameter("@Subfolder", SqlDbType.VarChar, 128)).Value = uploadInfo.SubDir;
 
-                    cmd.Parameters.Add(new SqlParameter("@FileCountNew", System.Data.SqlDbType.Int));
-                    cmd.Parameters["@FileCountNew"].Direction = System.Data.ParameterDirection.Input;
-                    cmd.Parameters["@FileCountNew"].Value = uploadInfo.FileCountNew;
+                    cmd.Parameters.Add(new SqlParameter("@FileCountNew", SqlDbType.Int)).Value = uploadInfo.FileCountNew;
 
-                    cmd.Parameters.Add(new SqlParameter("@FileCountUpdated", System.Data.SqlDbType.Int));
-                    cmd.Parameters["@FileCountUpdated"].Direction = System.Data.ParameterDirection.Input;
-                    cmd.Parameters["@FileCountUpdated"].Value = uploadInfo.FileCountUpdated;
+                    cmd.Parameters.Add(new SqlParameter("@FileCountUpdated", SqlDbType.Int)).Value = uploadInfo.FileCountUpdated;
 
-                    cmd.Parameters.Add(new SqlParameter("@Bytes", System.Data.SqlDbType.BigInt));
-                    cmd.Parameters["@Bytes"].Direction = System.Data.ParameterDirection.Input;
-                    cmd.Parameters["@Bytes"].Value = uploadInfo.Bytes;
+                    cmd.Parameters.Add(new SqlParameter("@Bytes", SqlDbType.BigInt)).Value = uploadInfo.Bytes;
 
-                    cmd.Parameters.Add(new SqlParameter("@UploadTimeSeconds", System.Data.SqlDbType.Real));
-                    cmd.Parameters["@UploadTimeSeconds"].Direction = System.Data.ParameterDirection.Input;
-                    cmd.Parameters["@UploadTimeSeconds"].Value = (float)uploadInfo.UploadTimeSeconds;
+                    cmd.Parameters.Add(new SqlParameter("@UploadTimeSeconds", SqlDbType.Real)).Value = (float)uploadInfo.UploadTimeSeconds;
 
-                    cmd.Parameters.Add(new SqlParameter("@StatusURI", System.Data.SqlDbType.VarChar, 255));
-                    cmd.Parameters["@StatusURI"].Direction = System.Data.ParameterDirection.Input;
-                    cmd.Parameters["@StatusURI"].Value = uploadInfo.StatusURI;
+                    cmd.Parameters.Add(new SqlParameter("@StatusURI", SqlDbType.VarChar, 255)).Value = uploadInfo.StatusURI;
 
-                    cmd.Parameters.Add(new SqlParameter("@ErrorCode", System.Data.SqlDbType.Int));
-                    cmd.Parameters["@ErrorCode"].Direction = System.Data.ParameterDirection.Input;
-                    cmd.Parameters["@ErrorCode"].Value = uploadInfo.ErrorCode;
+                    cmd.Parameters.Add(new SqlParameter("@ErrorCode", SqlDbType.Int)).Value = uploadInfo.ErrorCode;
                 }
 
                 ReportMessage("Calling " + SP_NAME_STORE_MYEMSL_STATS + " for Data Package " + dataPkgInfo.ID, clsLogTools.LogLevels.DEBUG);
@@ -1241,30 +1228,20 @@ namespace DataPackage_Archive_Manager
             {
                 var cmd = new SqlCommand(SP_NAME_SET_MYEMSL_UPLOAD_STATUS)
                 {
-                    CommandType = System.Data.CommandType.StoredProcedure
+                    CommandType = CommandType.StoredProcedure
                 };
 
-                cmd.Parameters.Add("@Return", System.Data.SqlDbType.Int);
-                cmd.Parameters["@Return"].Direction = System.Data.ParameterDirection.ReturnValue;
+                cmd.Parameters.Add("@Return", SqlDbType.Int).Direction = ParameterDirection.ReturnValue;
 
-                cmd.Parameters.Add("@EntryID", System.Data.SqlDbType.Int);
-                cmd.Parameters["@EntryID"].Direction = System.Data.ParameterDirection.Input;
-                cmd.Parameters["@EntryID"].Value = statusInfo.EntryID;
+                cmd.Parameters.Add("@EntryID", SqlDbType.Int).Value = statusInfo.EntryID;
 
-                cmd.Parameters.Add("@DataPackageID", System.Data.SqlDbType.Int);
-                cmd.Parameters["@DataPackageID"].Direction = System.Data.ParameterDirection.Input;
-                cmd.Parameters["@DataPackageID"].Value = statusInfo.DataPackageID;
+                cmd.Parameters.Add("@DataPackageID", SqlDbType.Int).Value = statusInfo.DataPackageID;
 
-                cmd.Parameters.Add("@Available", System.Data.SqlDbType.TinyInt);
-                cmd.Parameters["@Available"].Direction = System.Data.ParameterDirection.Input;
-                cmd.Parameters["@Available"].Value = BoolToTinyInt(true);
+                cmd.Parameters.Add("@Available", SqlDbType.TinyInt).Value = BoolToTinyInt(true);
 
-                cmd.Parameters.Add("@Verified", System.Data.SqlDbType.TinyInt);
-                cmd.Parameters["@Verified"].Direction = System.Data.ParameterDirection.Input;
-                cmd.Parameters["@Verified"].Value = BoolToTinyInt(verified);
+                cmd.Parameters.Add("@Verified", SqlDbType.TinyInt).Value = BoolToTinyInt(verified);
 
-                cmd.Parameters.Add("@message", System.Data.SqlDbType.VarChar, 512);
-                cmd.Parameters["@message"].Direction = System.Data.ParameterDirection.Output;
+                cmd.Parameters.Add("@message", SqlDbType.VarChar, 512).Direction = ParameterDirection.Output;
 
                 if (PreviewMode)
                 {
@@ -1386,7 +1363,7 @@ namespace DataPackage_Archive_Manager
         /// <param name="dataPackageIDs"></param>
         /// <param name="dataPkgID"></param>
         /// <param name="fileNames"></param>
-        private void VerifyKnownResultsAddExpectedFiles(Dictionary<int, List<string>> dataPackageIDs, int dataPkgID, List<string> fileNames)
+        private void VerifyKnownResultsAddExpectedFiles(IDictionary<int, List<string>> dataPackageIDs, int dataPkgID, List<string> fileNames)
         {
             dataPackageIDs.Add(dataPkgID, fileNames);
         }
@@ -1627,22 +1604,18 @@ namespace DataPackage_Archive_Manager
 
         #region "Event Handlers"
 
-            ReportError("Stored procedure execution error: " + Message, true);
-        }
-
-
-        void myEMSLUpload_DebugEvent(object sender, Pacifica.Core.MessageEventArgs e)
+        void myEMSLUpload_DebugEvent(object sender, MessageEventArgs e)
         {
             if (!string.IsNullOrWhiteSpace(e.Message))
                 ReportMessage(e.Message, clsLogTools.LogLevels.DEBUG);
         }
 
-        void myEMSLUpload_ErrorEvent(object sender, Pacifica.Core.MessageEventArgs e)
+        void myEMSLUpload_ErrorEvent(object sender, MessageEventArgs e)
         {
             ReportError(e.Message, true);
         }
 
-        void myEMSLUpload_StatusUpdate(object sender, Pacifica.Core.StatusEventArgs e)
+        void myEMSLUpload_StatusUpdate(object sender, StatusEventArgs e)
         {
             if (DateTime.UtcNow.Subtract(mLastStatusUpdate).TotalSeconds >= 5)
             {
@@ -1652,7 +1625,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        void myEMSLUpload_UploadCompleted(object sender, Pacifica.Core.UploadCompletedEventArgs e)
+        void myEMSLUpload_UploadCompleted(object sender, UploadCompletedEventArgs e)
         {
             var msg = "Upload complete";
 
