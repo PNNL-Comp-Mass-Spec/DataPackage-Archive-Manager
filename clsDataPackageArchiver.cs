@@ -745,17 +745,7 @@ namespace DataPackage_Archive_Manager
 
                 if (!PreviewMode)
                 {
-                    if (Environment.UserName.ToLower() == "svc-dms")
-                    {
-                        ReportMessage(@"Pushing data into MyEMSL as user pnl\" + Environment.UserName);
-                    }
-                    else
-                    {
-                        // The current user is not svc-dms
-                        // Uploaded files would be associated with the wrong username and thus would not be visible to all DMS Users
-                        PreviewMode = true;
-                        ReportMessage(@"Current user is not pnl\svc-dms; auto-enabling PreviewMode for user " + Environment.UserName);
-                    }
+                    ReportMessage(@"Pushing data into MyEMSL as user pnl\" + Environment.UserName);
                 }
 
                 // List of groups of data package IDs
