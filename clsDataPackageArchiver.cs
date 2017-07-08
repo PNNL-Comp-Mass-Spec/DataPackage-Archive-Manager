@@ -990,11 +990,10 @@ namespace DataPackage_Archive_Manager
                     uploadMetadata.DataPackageID = dataPkgInfo.ID;
                     uploadMetadata.SubFolder = uploadInfo.SubDir;
 
-
                     if (dataPkgInfo.OwnerEUSID == 0)
                     {
-                        ReportMessage("Warning: data package owner (" + dataPkgInfo.OwnerPRN + ") does not have an EUS_PersonID; using " + Upload.DEFAULT_EUS_OPERATOR_ID);
-                        uploadMetadata.EUSOperatorID = Pacifica.Core.Upload.DEFAULT_EUS_OPERATOR_ID;
+                        OnWarningEvent("Data package owner (" + dataPkgInfo.OwnerPRN + ") does not have an EUS_PersonID; using " + Upload.DEFAULT_EUS_OPERATOR_ID);
+                        uploadMetadata.EUSOperatorID = Upload.DEFAULT_EUS_OPERATOR_ID;
                     }
                     else
                     {
@@ -1003,8 +1002,8 @@ namespace DataPackage_Archive_Manager
 
                     if (string.IsNullOrWhiteSpace(dataPkgInfo.EUSProposalID))
                     {
-                        ReportMessage("Warning: data package does not have an associated EUS Proposal; using " + Upload.DEFAULT_EUS_PROPOSAL_ID);
-                        uploadMetadata.EUSProposalID = Pacifica.Core.Upload.DEFAULT_EUS_PROPOSAL_ID;
+                        OnWarningEvent("Data package does not have an associated EUS Proposal; using " + Upload.DEFAULT_EUS_PROPOSAL_ID);
+                        uploadMetadata.EUSProposalID = Upload.DEFAULT_EUS_PROPOSAL_ID;
                     }
                     else
                     {
