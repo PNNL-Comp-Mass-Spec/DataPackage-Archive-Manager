@@ -1025,8 +1025,7 @@ namespace DataPackage_Archive_Manager
                     }
 
                     // Instantiate the metadata object
-                    Upload.udtEUSInfo eusInfo;
-                    var metadataObject = Upload.CreateMetadataObject(uploadMetadata, lstUnmatchedFiles, out eusInfo);
+                    var metadataObject = Upload.CreatePacificaMetadataObject(uploadMetadata, lstUnmatchedFiles, out var eusInfo);
 
                     var metadataDescription = Upload.GetMetadataObjectDescription(metadataObject);
                     ReportMessage("UploadMetadata: " + metadataDescription);
