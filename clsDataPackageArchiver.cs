@@ -128,11 +128,9 @@ namespace DataPackage_Archive_Manager
             var pacificaConfig = new Configuration();
 
             mMyEMSLUploader = new Upload(pacificaConfig);
+            RegisterEvents(mMyEMSLUploader);
 
             // Attach the events
-            mMyEMSLUploader.DebugEvent += myEMSLUpload_DebugEvent;
-            mMyEMSLUploader.ErrorEvent += myEMSLUpload_ErrorEvent;
-
             mMyEMSLUploader.StatusUpdate += myEMSLUpload_StatusUpdate;
             mMyEMSLUploader.UploadCompleted += myEMSLUpload_UploadCompleted;
 
@@ -1399,7 +1397,7 @@ namespace DataPackage_Archive_Manager
                 const int DATA_PACKAGE_GROUP_SIZE = 5;
 
                 var statusChecker = new MyEMSLStatusCheck();
-                statusChecker.ErrorEvent += statusChecker_ErrorEvent;
+                RegisterEvents(statusChecker);
 
                 for (var i = 0; i < distinctDataPackageIDs.Count; i += DATA_PACKAGE_GROUP_SIZE)
                 {
