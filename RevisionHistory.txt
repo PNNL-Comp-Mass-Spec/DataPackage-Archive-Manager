@@ -1,5 +1,9 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.6261; July 14, 2017
+	- Updated to use the new MyEMSL API
+	- Update to .NET 4.6.2 and AnyCPU
+
 Version 1.0.6261; February 21, 2017
 	- Updated PRISM.dll
 	- Update to .NET 4.5.2
