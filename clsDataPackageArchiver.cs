@@ -1540,7 +1540,8 @@ namespace DataPackage_Archive_Manager
 
                 if (!diDataPkg.Exists)
                 {
-                    // Update values in the DB
+                    OnErrorEvent("Data package folder not found by VerifyUploadStatusWork, this is unexpected; see: " + diDataPkg.FullName);
+
                     UpdateMyEMSLUploadStatus(statusInfo.Value, verified: false);
 
                     return eUploadStatus.Success;
