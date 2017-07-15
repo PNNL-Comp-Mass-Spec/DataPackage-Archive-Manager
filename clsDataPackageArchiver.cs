@@ -857,6 +857,11 @@ namespace DataPackage_Archive_Manager
                 else
                     ReportMessage("Processed " + successCount + " data packages");
 
+                // Wait 3 seconds then continue
+                // The purpose for the wait is to give MyEMSL time to process the newly ingested files;
+                // if the files are small, they may be fully processed and stored before the call to VerifyUploadStatus
+                System.Threading.Thread.Sleep(3000);
+
                 return true;
             }
 
@@ -1460,9 +1465,8 @@ namespace DataPackage_Archive_Manager
                     out var lookupError,
                     out var errorMessage);
 
-                // Convert the percent complete value (between 0 and 100) to a number between 0 and 7
-                // since historically there were 7 steps to the ingest process
-                var ingestStepsCompleted = statusChecker.IngestStepCompletionCount(percentComplete);
+                // Examine the response to determine the percent complete
+                statusChecker.IngestStepCompletionCount(percentComplete);
 
                 var dataPackageAndEntryId = "Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID;
 
