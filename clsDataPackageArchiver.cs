@@ -142,7 +142,6 @@ namespace DataPackage_Archive_Manager
             return (short)(value ? 1 : 0);
         }
 
-
         private int CountFilesForDataPackage(clsDataPackageInfo dataPkgInfo)
         {
             var diDataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);

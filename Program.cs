@@ -18,7 +18,7 @@ namespace DataPackage_Archive_Manager
     internal static class Program
     {
 
-        public const string PROGRAM_DATE = "July 14, 2017";
+        public const string PROGRAM_DATE = "August 24, 2017";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -233,44 +233,28 @@ namespace DataPackage_Archive_Manager
             return false;
         }
 
-
-        private static void ShowErrorMessage(string strMessage)
+        private static void ShowErrorMessage(string message, Exception ex = null)
         {
-            const string strSeparator = "------------------------------------------------------------------------------";
-
-            Console.WriteLine();
-            Console.WriteLine(strSeparator);
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(strMessage);
-            Console.ResetColor();
-            Console.WriteLine(strSeparator);
-            Console.WriteLine();
-
-            WriteToErrorStream(strMessage);
+            ConsoleMsgUtils.ShowError(message, ex);
         }
 
-        private static void ShowErrorMessage(string strTitle, IEnumerable<string> items)
+        private static void ShowErrorMessage(string message, IReadOnlyCollection<string> additionalInfo)
         {
-            const string strSeparator = "------------------------------------------------------------------------------";
-
-            Console.WriteLine();
-            Console.WriteLine(strSeparator);
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(strTitle);
-            var strMessage = strTitle + ":";
-
-            foreach (var item in items)
+            if (additionalInfo == null || additionalInfo.Count == 0)
             {
-                Console.WriteLine("   " + item);
-                strMessage += " " + item;
+                ConsoleMsgUtils.ShowError(message);
+                return;
             }
-            Console.ResetColor();
-            Console.WriteLine(strSeparator);
-            Console.WriteLine();
 
-            WriteToErrorStream(strMessage);
+            var formattedMessage = message + ":";
+
+            foreach (var item in additionalInfo)
+            {
+                formattedMessage += Environment.NewLine + "  " + item;
+            }
+
+            ConsoleMsgUtils.ShowError(formattedMessage, true, false);
         }
-
 
         private static void ShowProgramHelp()
         {
@@ -322,52 +306,16 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        private static void WriteToErrorStream(string strErrorMessage)
-        {
-            try
-            {
-                using (var swErrorStream = new System.IO.StreamWriter(Console.OpenStandardError()))
-                {
-                    swErrorStream.WriteLine(strErrorMessage);
-                }
-            }
-            // ReSharper disable once EmptyGeneralCatchClause
-            catch
-            {
-                // Ignore errors here
-            }
-        }
-
         #region "Event Handlers"
 
         private static void Archiver_DebugEvent(string strMessage)
         {
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("  " + strMessage);
-            Console.ResetColor();
+            ConsoleMsgUtils.ShowDebug(strMessage);
         }
 
         private static void Archiver_ErrorEvent(string errorMessage, Exception ex)
         {
-            string formattedError;
-            if (ex == null || errorMessage.EndsWith(ex.Message))
-            {
-                formattedError = errorMessage;
-            }
-            else
-            {
-                formattedError = errorMessage + ": " + ex.Message;
-            }
-
-            ShowErrorMessage(formattedError);
-
-            if (ex != null)
-            {
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine(clsStackTraceFormatter.GetExceptionStackTraceMultiLine(ex));
-            }
-
-            Console.ResetColor();
+            ConsoleMsgUtils.ShowError(errorMessage, ex);
         }
 
         private static void Archiver_StatusEvent(string strMessage)
@@ -377,9 +325,7 @@ namespace DataPackage_Archive_Manager
 
         private static void Archiver_WarningEvent(string strMessage)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(strMessage);
-            Console.ResetColor();
+            ConsoleMsgUtils.ShowWarning(strMessage);
         }
 
         #endregion
