@@ -797,7 +797,15 @@ namespace DataPackage_Archive_Manager
                 {
                     groupNumber++;
 
-                    var dataPackageInfoCache = new DataPackageListInfo();
+                    var dataPackageInfoCache = new DataPackageListInfo
+                    {
+                        ReportMetadataURLs = TraceMode || LogLevel == clsLogTools.LogLevels.DEBUG,
+                        ThrowErrors = true,
+                        TraceMode = TraceMode
+                    };
+
+                    RegisterEvents(dataPackageInfoCache);
+
                     foreach (var dataPkgID in dataPkgGroup)
                     {
                         dataPackageInfoCache.AddDataPackage(dataPkgID);
@@ -1294,7 +1302,14 @@ namespace DataPackage_Archive_Manager
                 VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1376, new List<string> { "Concatenated_msgfdb_syn_plus_ascore.txt", "AScore_CID_0.5Da_ETD_0.5Da_HCD_0.05Da.xml" });
                 VerifyKnownResultsAddExpectedFiles(dataPackageIDs, 1512, new List<string> { "AScore_CID_0.5Da_ETD_0.5Da_HCD_0.05Da.xml", "Job_to_Dataset_Map.txt" });
 
-                var dataPackageListInfo = new DataPackageListInfo();
+                var dataPackageListInfo = new DataPackageListInfo
+                {
+                    ReportMetadataURLs = TraceMode || LogLevel == clsLogTools.LogLevels.DEBUG,
+                    ThrowErrors = true,
+                    TraceMode = TraceMode
+                };
+
+                RegisterEvents(dataPackageListInfo);
 
                 // Lookup the files tracked by MyEMSL for data packages created between 2012 and 2016
                 foreach (var dataPkg in dataPackageIDs)
@@ -1405,7 +1420,15 @@ namespace DataPackage_Archive_Manager
 
                 for (var i = 0; i < distinctDataPackageIDs.Count; i += DATA_PACKAGE_GROUP_SIZE)
                 {
-                    var dataPackageInfoCache = new DataPackageListInfo();
+                    var dataPackageInfoCache = new DataPackageListInfo
+                    {
+                        ReportMetadataURLs = TraceMode || LogLevel == clsLogTools.LogLevels.DEBUG,
+                        ThrowErrors = true,
+                        TraceMode = TraceMode
+                    };
+
+                    RegisterEvents(dataPackageInfoCache);
+
                     var dctURIsInGroup = new Dictionary<int, udtMyEMSLStatusInfo>();
 
                     for (var j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
