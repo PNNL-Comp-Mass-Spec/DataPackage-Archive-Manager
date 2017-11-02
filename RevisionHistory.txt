@@ -1,5 +1,8 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.6514; November 1, 2017
+	- Monitor events raised by DataPackageListInfo
+
 Version 1.0.6261; July 14, 2017
 	- Updated to use the new MyEMSL API
 	- Update to .NET 4.6.2 and AnyCPU
