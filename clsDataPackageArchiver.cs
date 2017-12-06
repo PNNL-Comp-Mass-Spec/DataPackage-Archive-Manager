@@ -555,8 +555,8 @@ namespace DataPackage_Archive_Manager
             mLastStatusUpdate = DateTime.UtcNow;
 
             // Set up the loggers
-            const string logFileName = @"Logs\DataPkgArchiver";
-            clsLogTools.CreateFileLogger(logFileName, LogLevel);
+            const string logFileNameBase = @"Logs\DataPkgArchiver";
+            clsLogTools.CreateFileLogger(logFileNameBase, LogLevel);
 
             clsLogTools.CreateDbLogger(DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
 
