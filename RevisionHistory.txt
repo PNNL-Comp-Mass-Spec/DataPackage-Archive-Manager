@@ -1,5 +1,10 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.6549; December 6, 2017
+	- Synchronize clsLogTools with other projects
+		- Initialize the log file with CreateFileLogger
+		- Archives old log files daily
+
 Version 1.0.6514; November 1, 2017
 	- Monitor events raised by DataPackageListInfo
 
