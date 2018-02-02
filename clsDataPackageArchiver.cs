@@ -1043,17 +1043,15 @@ namespace DataPackage_Archive_Manager
                     }
 
                     // Instantiate the metadata object
-                    var metadataObject = Upload.CreatePacificaMetadataObject(uploadMetadata, lstUnmatchedFiles, out var eusInfo);
+                    var metadataObject = Upload.CreatePacificaMetadataObject(uploadMetadata, lstUnmatchedFiles, out _);
 
                     var metadataDescription = Upload.GetMetadataObjectDescription(metadataObject);
                     ReportMessage("UploadMetadata: " + metadataDescription);
 
-                    string statusURL;
-
                     mMyEMSLUploader.TransferFolderPath = diDataPkg.Parent.FullName;
                     mMyEMSLUploader.JobNumber = dataPkgInfo.ID.ToString();
 
-                    success = mMyEMSLUploader.StartUpload(metadataObject, out statusURL);
+                    success = mMyEMSLUploader.StartUpload(metadataObject, out var statusURL);
 
                     var tsElapsedTime = DateTime.UtcNow.Subtract(dtStartTime);
 
@@ -1630,17 +1628,6 @@ namespace DataPackage_Archive_Manager
 
         #region "Event Handlers"
 
-        void myEMSLUpload_DebugEvent(object sender, MessageEventArgs e)
-        {
-            if (!string.IsNullOrWhiteSpace(e.Message))
-                ReportMessage(e.Message, clsLogTools.LogLevels.DEBUG);
-        }
-
-        void myEMSLUpload_ErrorEvent(object sender, MessageEventArgs e)
-        {
-            ReportError(e.Message, true);
-        }
-
         void myEMSLUpload_StatusUpdate(object sender, StatusEventArgs e)
         {
             if (DateTime.UtcNow.Subtract(mLastStatusUpdate).TotalSeconds >= 5)
@@ -1663,11 +1650,6 @@ namespace DataPackage_Archive_Manager
                 msg += ": " + e.ServerResponse;
 
             ReportMessage(msg);
-        }
-
-        void statusChecker_ErrorEvent(object sender, MessageEventArgs e)
-        {
-            ReportError("Status checker error: " + e.Message);
         }
 
         #endregion

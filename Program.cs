@@ -68,8 +68,7 @@ namespace DataPackage_Archive_Manager
 
                 }
 
-                string pendingWindowsUpdateMessage;
-                var updatesArePending = clsWindowsUpdateStatus.UpdatesArePending(out pendingWindowsUpdateMessage);
+                var updatesArePending = clsWindowsUpdateStatus.UpdatesArePending(out var pendingWindowsUpdateMessage);
 
                 if (updatesArePending)
                 {
@@ -169,15 +168,13 @@ namespace DataPackage_Archive_Manager
                     mDataPkgIDList = parseCommandLine.RetrieveNonSwitchParameter(0);
                 }
 
-                string strValue;
-                if (parseCommandLine.RetrieveValueForParameter("D", out strValue))
+                if (commandLineParser.RetrieveValueForParameter("D", out var strValue))
                 {
                     if (string.IsNullOrWhiteSpace(strValue))
                         ShowErrorMessage("/D does not have a date; date threshold will not be used");
                     else
                     {
-                        DateTime dtThreshold;
-                        if (DateTime.TryParse(strValue, out dtThreshold))
+                        if (DateTime.TryParse(strValue, out var dtThreshold))
                         {
                             mDateThreshold = dtThreshold;
                         }
