@@ -24,7 +24,7 @@ namespace DataPackage_Archive_Manager
         /// Gigasax.DMS_Data_Package
         /// </summary>
         private static string mDBConnectionString;
-        private static clsLogTools.LogLevels mLogLevel;
+        private static PRISM.Logging.BaseLogger.LogLevels mLogLevel;
 
         private static string mDataPkgIDList;
         private static DateTime mDateThreshold;
@@ -39,7 +39,7 @@ namespace DataPackage_Archive_Manager
             var parseCommandLine = new clsParseCommandLine();
 
             mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
-            mLogLevel = clsLogTools.LogLevels.INFO;
+            mLogLevel = PRISM.Logging.BaseLogger.LogLevels.INFO;
 
             mDataPkgIDList = string.Empty;
             mDateThreshold = DateTime.MinValue;
