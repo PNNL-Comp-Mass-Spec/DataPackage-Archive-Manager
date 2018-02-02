@@ -1,5 +1,9 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.6606; February 1, 2018
+	- Replace Log4net with Logging classes in PRISM.dll
+	- Obtain JayRock.Json from Nuget
+
 Version 1.0.6549; December 6, 2017
 	- Synchronize clsLogTools with other projects
 		- Initialize the log file with CreateFileLogger
