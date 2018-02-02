@@ -18,7 +18,7 @@ namespace DataPackage_Archive_Manager
     internal static class Program
     {
 
-        public const string PROGRAM_DATE = "December 6, 2017";
+        public const string PROGRAM_DATE = "February 1, 2018";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -36,7 +36,7 @@ namespace DataPackage_Archive_Manager
 
         public static int Main(string[] args)
         {
-            var parseCommandLine = new clsParseCommandLine();
+            var commandLineParser = new clsParseCommandLine();
 
             mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
             mLogLevel = PRISM.Logging.BaseLogger.LogLevels.INFO;
@@ -52,15 +52,15 @@ namespace DataPackage_Archive_Manager
             {
                 var success = false;
 
-                if (parseCommandLine.ParseCommandLine())
+                if (commandLineParser.ParseCommandLine())
                 {
-                    if (SetOptionsUsingCommandLineParameters(parseCommandLine))
+                    if (SetOptionsUsingCommandLineParameters(commandLineParser))
                         success = true;
                 }
 
                 if (!success ||
-                    parseCommandLine.NeedToShowHelp ||
-                    parseCommandLine.ParameterCount + parseCommandLine.NonSwitchParameterCount == 0 ||
+                    commandLineParser.NeedToShowHelp ||
+                    commandLineParser.ParameterCount + commandLineParser.NonSwitchParameterCount == 0 ||
                     mDataPkgIDList.Length == 0)
                 {
                     ShowProgramHelp();
@@ -141,7 +141,7 @@ namespace DataPackage_Archive_Manager
             return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
         }
 
-        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine parseCommandLine)
+        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
         {
             // Returns True if no problems; otherwise, returns false
             var lstValidParameters = new List<string> { "D", "Preview", "V", "Trace", "Debug", "DB", "SkipCheckExisting" };
@@ -149,10 +149,10 @@ namespace DataPackage_Archive_Manager
             try
             {
                 // Make sure no invalid parameters are present
-                if (parseCommandLine.InvalidParametersPresent(lstValidParameters))
+                if (commandLineParser.InvalidParametersPresent(lstValidParameters))
                 {
                     var badArguments = new List<string>();
-                    foreach (var item in parseCommandLine.InvalidParameters(lstValidParameters))
+                    foreach (var item in commandLineParser.InvalidParameters(lstValidParameters))
                     {
                         badArguments.Add("/" + item);
                     }
@@ -162,10 +162,10 @@ namespace DataPackage_Archive_Manager
                     return false;
                 }
 
-                // Query parseCommandLine to see if various parameters are present
-                if (parseCommandLine.NonSwitchParameterCount > 0)
+                // Query commandLineParser to see if various parameters are present
+                if (commandLineParser.NonSwitchParameterCount > 0)
                 {
-                    mDataPkgIDList = parseCommandLine.RetrieveNonSwitchParameter(0);
+                    mDataPkgIDList = commandLineParser.RetrieveNonSwitchParameter(0);
                 }
 
                 if (commandLineParser.RetrieveValueForParameter("D", out var strValue))
@@ -184,33 +184,33 @@ namespace DataPackage_Archive_Manager
 
                 }
 
-                if (parseCommandLine.IsParameterPresent("Preview"))
+                if (commandLineParser.IsParameterPresent("Preview"))
                 {
                     mPreviewMode = true;
                 }
 
-                if (parseCommandLine.IsParameterPresent("SkipCheckExisting"))
+                if (commandLineParser.IsParameterPresent("SkipCheckExisting"))
                 {
                     mSkipCheckExisting = true;
                 }
 
-                if (parseCommandLine.IsParameterPresent("Trace"))
+                if (commandLineParser.IsParameterPresent("Trace"))
                 {
                     mTraceMode = true;
                 }
 
-                if (parseCommandLine.IsParameterPresent("V"))
+                if (commandLineParser.IsParameterPresent("V"))
                 {
                     mVerifyOnly = true;
                 }
 
-                if (parseCommandLine.IsParameterPresent("Debug"))
+                if (commandLineParser.IsParameterPresent("Debug"))
                 {
-                    mLogLevel = clsLogTools.LogLevels.DEBUG;
+                    mLogLevel = PRISM.Logging.BaseLogger.LogLevels.DEBUG;
                     mTraceMode = true;
                 }
 
-                if (parseCommandLine.RetrieveValueForParameter("DB", out strValue))
+                if (commandLineParser.RetrieveValueForParameter("DB", out strValue))
                 {
                     if (string.IsNullOrWhiteSpace(strValue))
                         ShowErrorMessage("/DB does not have a value; not overriding the connection string");
