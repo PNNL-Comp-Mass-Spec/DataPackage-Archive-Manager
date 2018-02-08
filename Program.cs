@@ -19,7 +19,7 @@ namespace DataPackage_Archive_Manager
     internal static class Program
     {
 
-        public const string PROGRAM_DATE = "February 1, 2018";
+        public const string PROGRAM_DATE = "February 7, 2018";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -92,7 +92,7 @@ namespace DataPackage_Archive_Manager
 
                 if (mVerifyOnly)
                 {
-                    //Verify previously updated data
+                    // Verify previously updated data
                     success = archiver.VerifyUploadStatus();
                 }
                 else

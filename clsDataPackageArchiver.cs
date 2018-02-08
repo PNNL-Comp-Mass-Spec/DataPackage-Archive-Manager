@@ -120,6 +120,8 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         public clsDataPackageArchiver(string connectionString, BaseLogger.LogLevels logLevel)
         {
+            // Typically:
+            // Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;
             DBConnectionString = connectionString;
             LogLevel = logLevel;
 
@@ -536,7 +538,7 @@ namespace DataPackage_Archive_Manager
                         msg += ", RetryCount = " + retryCount;
                         ReportError(msg, true, ex);
 
-                        //Delay for 5 second before trying again
+                        // Delay for 5 second before trying again
                         System.Threading.Thread.Sleep(5000);
                     }
                 }
