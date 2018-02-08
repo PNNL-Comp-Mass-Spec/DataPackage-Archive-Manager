@@ -10,6 +10,7 @@ using System.Data.SqlClient;
 using MyEMSLReader;
 using Pacifica.Core;
 using PRISM;
+using PRISM.Logging;
 using Utilities = Pacifica.Core.Utilities;
 
 namespace DataPackage_Archive_Manager
@@ -110,14 +111,14 @@ namespace DataPackage_Archive_Manager
         /// WARN = 3,
         /// ERROR = 2,
         /// FATAL = 1</remarks>
-        public PRISM.Logging.BaseLogger.LogLevels LogLevel { get; }
+        public BaseLogger.LogLevels LogLevel { get; }
 
         #endregion
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public clsDataPackageArchiver(string connectionString, PRISM.Logging.BaseLogger.LogLevels logLevel)
+        public clsDataPackageArchiver(string connectionString, BaseLogger.LogLevels logLevel)
         {
             DBConnectionString = connectionString;
             LogLevel = logLevel;
@@ -171,7 +172,7 @@ namespace DataPackage_Archive_Manager
             if (lstDataPackageFilesAll.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                ReportMessage("Data Package " + dataPkgInfo.ID + " does not have any files; nothing to archive", PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                ReportMessage("Data Package " + dataPkgInfo.ID + " does not have any files; nothing to archive", BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
@@ -283,7 +284,7 @@ namespace DataPackage_Archive_Manager
                     msg += " since they are system or temporary files";
 
                 ReportMessage(msg + "; nothing to archive");
-                ReportMessage("  Data Package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                ReportMessage("  Data Package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
@@ -300,7 +301,7 @@ namespace DataPackage_Archive_Manager
                 else
                     msg = " Data Package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
 
-                ReportMessage(msg + "; nothing to archive", PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                ReportMessage(msg + "; nothing to archive", BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
@@ -344,7 +345,7 @@ namespace DataPackage_Archive_Manager
                     }
                     else
                     {
-                        ReportMessage(progressMessage, PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                        ReportMessage(progressMessage, BaseLogger.LogLevels.DEBUG);
                     }
                 }
             }
@@ -352,7 +353,7 @@ namespace DataPackage_Archive_Manager
             if (lstDatasetFilesToArchive.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                ReportMessage(" All files for Data Package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                ReportMessage(" All files for Data Package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, BaseLogger.LogLevels.DEBUG);
                 return lstDatasetFilesToArchive;
             }
 
@@ -556,14 +557,14 @@ namespace DataPackage_Archive_Manager
 
             // Set up the loggers
             const string logFileNameBase = @"Logs\DataPkgArchiver";
-            clsLogTools.SetFileLogLevel(LogLevel);
-            clsLogTools.CreateFileLogger(logFileNameBase);
 
-            clsLogTools.CreateDbLogger(DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
+            LogTools.CreateFileLogger(logFileNameBase, LogLevel);
+
+            LogTools.CreateDbLogger(DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
 
             // Make initial log entry
             var msg = "=== Started Data Package Archiver V" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " ===== ";
-            clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.INFO, msg);
+            LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.INFO, msg);
 
         }
 
@@ -642,7 +643,7 @@ namespace DataPackage_Archive_Manager
                 ReportError("Error in LookupDataPkgInfo: " + ex.Message, true, ex);
 
                 // Include the stack trace in the log
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.ERROR, "Detail for error in LookupDataPkgInfo", ex);
+                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, "Detail for error in LookupDataPkgInfo", ex);
 
                 return new List<clsDataPackageInfo>();
             }
@@ -800,7 +801,7 @@ namespace DataPackage_Archive_Manager
 
                     var dataPackageInfoCache = new DataPackageListInfo
                     {
-                        ReportMetadataURLs = TraceMode || LogLevel == PRISM.Logging.BaseLogger.LogLevels.DEBUG,
+                        ReportMetadataURLs = TraceMode || LogLevel == BaseLogger.LogLevels.DEBUG,
                         ThrowErrors = true,
                         TraceMode = TraceMode
                     };
@@ -853,7 +854,7 @@ namespace DataPackage_Archive_Manager
                 ReportError("Error in ProcessDataPackages: " + ex.Message, true, ex);
 
                 // Include the stack trace in the log
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.ERROR, "Detail for error in ProcessDataPackages", ex);
+                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, "Detail for error in ProcessDataPackages", ex);
 
                 return false;
             }
@@ -905,7 +906,7 @@ namespace DataPackage_Archive_Manager
 
                 if (!diDataPkg.Exists)
                 {
-                    ReportMessage("Data package folder not found (also tried remote share path): " + dataPkgInfo.LocalPath, PRISM.Logging.BaseLogger.LogLevels.WARN);
+                    ReportMessage("Data package folder not found (also tried remote share path): " + dataPkgInfo.LocalPath, BaseLogger.LogLevels.WARN);
                     return false;
                 }
 
@@ -937,8 +938,8 @@ namespace DataPackage_Archive_Manager
                     }
                     else
                     {
-                        ReportMessage("Data Package " + dataPkgInfo.ID + " has an existing metadata file less than 48 hours old; skipping this data package", PRISM.Logging.BaseLogger.LogLevels.WARN);
-                        ReportMessage("  " + fiMetadataFile.FullName, PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                        ReportMessage("Data Package " + dataPkgInfo.ID + " has an existing metadata file less than 48 hours old; skipping this data package", BaseLogger.LogLevels.WARN);
+                        ReportMessage("  " + fiMetadataFile.FullName, BaseLogger.LogLevels.DEBUG);
 
                         // This is not a fatal error; return true
                         return true;
@@ -975,7 +976,7 @@ namespace DataPackage_Archive_Manager
                         ReportMessage(
                             "Data package " + dataPkgInfo.ID +
                             " was previously uploaded to MyEMSL, yet the Metadata query did not return any files for this dataset.  Skipping this data package to prevent the addition of duplicate files to MyEMSL",
-                            PRISM.Logging.BaseLogger.LogLevels.ERROR, logToDB);
+                            BaseLogger.LogLevels.ERROR, logToDB);
 
                         return false;
                     }
@@ -1064,8 +1065,8 @@ namespace DataPackage_Archive_Manager
                         var msg = "Upload of changed files for Data Package " + dataPkgInfo.ID + " completed in " + tsElapsedTime.TotalSeconds.ToString("0.0") + " seconds: " + uploadInfo.FileCountNew + " new files, " + uploadInfo.FileCountUpdated + " updated files, " + uploadInfo.Bytes + " bytes";
                         ReportMessage(msg);
 
-                        msg = "  myEMSL statusURI => " + uploadInfo.StatusURI;
-                        ReportMessage(msg, PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                        var statusUriMsg = "  myEMSL statusURI => " + uploadInfo.StatusURI;
+                        ReportMessage(statusUriMsg, BaseLogger.LogLevels.DEBUG);
                     }
                     else
                     {
@@ -1087,7 +1088,7 @@ namespace DataPackage_Archive_Manager
                 ReportError("Error in ProcessOneDataPackage processing Data Package " + dataPkgInfo.ID + ": " + ex.Message, true, ex);
 
                 // Include the stack trace in the log
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.ERROR, "Detail for error in ProcessOneDataPackage for Data Package " + dataPkgInfo.ID, ex);
+                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, "Detail for error in ProcessOneDataPackage for Data Package " + dataPkgInfo.ID, ex);
 
                 uploadInfo.ErrorCode = ex.Message.GetHashCode();
                 if (uploadInfo.ErrorCode == 0)
@@ -1104,24 +1105,24 @@ namespace DataPackage_Archive_Manager
 
         private void ReportMessage(
             string message,
-            PRISM.Logging.BaseLogger.LogLevels logLevel = PRISM.Logging.BaseLogger.LogLevels.INFO,
+            BaseLogger.LogLevels logLevel = BaseLogger.LogLevels.INFO,
             bool logToDB = false)
         {
 
             if (logToDB)
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, logLevel, message.Trim());
+                LogTools.WriteLog(LogTools.LoggerTypes.LogDb, logLevel, message.Trim());
             else
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, logLevel, message);
+                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, logLevel, message);
 
             switch (logLevel)
             {
-                case PRISM.Logging.BaseLogger.LogLevels.DEBUG:
+                case BaseLogger.LogLevels.DEBUG:
                     OnDebugEvent(message);
                     break;
-                case PRISM.Logging.BaseLogger.LogLevels.ERROR:
+                case BaseLogger.LogLevels.ERROR:
                     OnErrorEvent(message);
                     break;
-                case PRISM.Logging.BaseLogger.LogLevels.WARN:
+                case BaseLogger.LogLevels.WARN:
                     OnWarningEvent(message);
                     break;
                 default:
@@ -1140,10 +1141,10 @@ namespace DataPackage_Archive_Manager
         {
             OnErrorEvent(message, ex);
 
-            clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.ERROR, message);
+            LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, message);
 
             if (logToDB)
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogDb, PRISM.Logging.BaseLogger.LogLevels.ERROR, message.Trim());
+                LogTools.WriteLog(LogTools.LoggerTypes.LogDb, BaseLogger.LogLevels.ERROR, message.Trim());
 
             ErrorMessage = string.Copy(message);
         }
@@ -1175,7 +1176,7 @@ namespace DataPackage_Archive_Manager
             try
             {
 
-                //Setup for execution of the stored procedure
+                // Setup for execution of the stored procedure
                 var cmd = new SqlCommand();
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
@@ -1200,9 +1201,9 @@ namespace DataPackage_Archive_Manager
                     cmd.Parameters.Add(new SqlParameter("@ErrorCode", SqlDbType.Int)).Value = uploadInfo.ErrorCode;
                 }
 
-                ReportMessage("Calling " + SP_NAME_STORE_MYEMSL_STATS + " for Data Package " + dataPkgInfo.ID, PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                ReportMessage("Calling " + SP_NAME_STORE_MYEMSL_STATS + " for Data Package " + dataPkgInfo.ID, BaseLogger.LogLevels.DEBUG);
 
-                //Execute the SP (retry the call up to 4 times)
+                // Execute the SP (retry the call up to 4 times)
                 m_ExecuteSP.TimeoutSeconds = 20;
                 var resCode = m_ExecuteSP.ExecuteSP(cmd, 4);
 
@@ -1211,14 +1212,14 @@ namespace DataPackage_Archive_Manager
                     return true;
                 }
 
-                var Msg = "Error " + resCode + " storing MyEMSL Upload Stats";
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.ERROR, Msg);
+                var msg = "Error " + resCode + " storing MyEMSL Upload Stats";
+                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg);
                 return false;
 
             }
             catch (Exception ex)
             {
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.ERROR, "Exception storing the MyEMSL upload stats: " + ex.Message);
+                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, "Exception storing the MyEMSL upload stats: " + ex.Message);
                 return false;
             }
 
@@ -1258,7 +1259,7 @@ namespace DataPackage_Archive_Manager
                     return true;
                 }
 
-                ReportMessage("  Calling " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Data Package " + statusInfo.DataPackageID, PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                ReportMessage("  Calling " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Data Package " + statusInfo.DataPackageID, BaseLogger.LogLevels.DEBUG);
 
                 m_ExecuteSP.TimeoutSeconds = 20;
                 var resCode = m_ExecuteSP.ExecuteSP(cmd, 2);
@@ -1267,13 +1268,13 @@ namespace DataPackage_Archive_Manager
                     return true;
 
                 var msg = "Error " + resCode + " calling stored procedure " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS;
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.ERROR, msg);
+                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg);
                 return false;
             }
             catch (Exception ex)
             {
                 const string msg = "Exception calling stored procedure " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS;
-                clsLogTools.WriteLog(clsLogTools.LoggerTypes.LogFile, PRISM.Logging.BaseLogger.LogLevels.ERROR, msg, ex);
+                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg, ex);
                 return false;
             }
         }
@@ -1303,7 +1304,7 @@ namespace DataPackage_Archive_Manager
 
                 var dataPackageListInfo = new DataPackageListInfo
                 {
-                    ReportMetadataURLs = TraceMode || LogLevel == PRISM.Logging.BaseLogger.LogLevels.DEBUG,
+                    ReportMetadataURLs = TraceMode || LogLevel == BaseLogger.LogLevels.DEBUG,
                     ThrowErrors = true,
                     TraceMode = TraceMode
                 };
@@ -1421,7 +1422,7 @@ namespace DataPackage_Archive_Manager
                 {
                     var dataPackageInfoCache = new DataPackageListInfo
                     {
-                        ReportMetadataURLs = TraceMode || LogLevel == PRISM.Logging.BaseLogger.LogLevels.DEBUG,
+                        ReportMetadataURLs = TraceMode || LogLevel == BaseLogger.LogLevels.DEBUG,
                         ThrowErrors = true,
                         TraceMode = TraceMode
                     };
@@ -1543,12 +1544,12 @@ namespace DataPackage_Archive_Manager
                 if (archiveFiles.Count > 0)
                 {
                     ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is visible in MyEMSL Metadata",
-                                    PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                                    BaseLogger.LogLevels.DEBUG);
                 }
                 else
                 {
                     ReportMessage("Data package " + statusInfo.Value.DataPackageID + " is not yet visible in MyEMSL Metadata",
-                                    PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                                    BaseLogger.LogLevels.DEBUG);
 
                     // Update values in the DB
                     UpdateMyEMSLUploadStatus(statusInfo.Value, verified: false);
@@ -1610,7 +1611,7 @@ namespace DataPackage_Archive_Manager
                 {
                     ReportMessage(
                         "Exception verifying archive status for Data package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
-                        statusInfo.Value.EntryID + ": " + ex.Message, PRISM.Logging.BaseLogger.LogLevels.WARN);
+                        statusInfo.Value.EntryID + ": " + ex.Message, BaseLogger.LogLevels.WARN);
                 }
                 else
                 {
@@ -1633,7 +1634,7 @@ namespace DataPackage_Archive_Manager
             if (DateTime.UtcNow.Subtract(mLastStatusUpdate).TotalSeconds >= 5)
             {
                 mLastStatusUpdate = DateTime.UtcNow;
-                ReportMessage(e.StatusMessage, PRISM.Logging.BaseLogger.LogLevels.DEBUG);
+                ReportMessage(e.StatusMessage, BaseLogger.LogLevels.DEBUG);
             }
 
         }

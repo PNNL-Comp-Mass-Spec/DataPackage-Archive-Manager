@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using PRISM;
+using PRISM.Logging;
 
 namespace DataPackage_Archive_Manager
 {
@@ -24,7 +25,7 @@ namespace DataPackage_Archive_Manager
         /// Gigasax.DMS_Data_Package
         /// </summary>
         private static string mDBConnectionString;
-        private static PRISM.Logging.BaseLogger.LogLevels mLogLevel;
+        private static BaseLogger.LogLevels mLogLevel;
 
         private static string mDataPkgIDList;
         private static DateTime mDateThreshold;
@@ -39,7 +40,7 @@ namespace DataPackage_Archive_Manager
             var commandLineParser = new clsParseCommandLine();
 
             mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
-            mLogLevel = PRISM.Logging.BaseLogger.LogLevels.INFO;
+            mLogLevel = BaseLogger.LogLevels.INFO;
 
             mDataPkgIDList = string.Empty;
             mDateThreshold = DateTime.MinValue;
@@ -119,6 +120,8 @@ namespace DataPackage_Archive_Manager
 
                 }
 
+                FileLogger.FlushPendingMessages();
+
                 if (!success)
                 {
                     ShowErrorMessage("Error archiving the data packages: " + archiver.ErrorMessage);
@@ -127,6 +130,8 @@ namespace DataPackage_Archive_Manager
             }
             catch (Exception ex)
             {
+                FileLogger.FlushPendingMessages();
+
                 Console.WriteLine("Error occurred in Program->Main: " + Environment.NewLine + ex.Message);
                 Console.WriteLine(ex.StackTrace);
                 Thread.Sleep(1500);
@@ -206,7 +211,7 @@ namespace DataPackage_Archive_Manager
 
                 if (commandLineParser.IsParameterPresent("Debug"))
                 {
-                    mLogLevel = PRISM.Logging.BaseLogger.LogLevels.DEBUG;
+                    mLogLevel = BaseLogger.LogLevels.DEBUG;
                     mTraceMode = true;
                 }
 
