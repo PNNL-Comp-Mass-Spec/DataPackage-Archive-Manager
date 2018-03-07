@@ -1485,12 +1485,13 @@ namespace DataPackage_Archive_Manager
 
                 var serverResponse = statusChecker.GetIngestStatus(
                     statusInfo.Value.StatusURI,
+                    out _,
                     out var percentComplete,
                     out var lookupError,
                     out var errorMessage);
 
-                // Examine the response to determine the percent complete
-                statusChecker.IngestStepCompletionCount(percentComplete);
+                // Could examine the current task and percent complete to determine the number of ingest steps completed
+                // var ingestStepsCompleted = statusChecker.DetermineIngestStepsCompleted(currentTask, percentComplete, 0);
 
                 var dataPackageAndEntryId = "Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " + statusInfo.Value.EntryID;
 
