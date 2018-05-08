@@ -11,15 +11,15 @@ namespace DataPackage_Archive_Manager
     // -------------------------------------------------------------------------------
     // Written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
     //
-    // E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com
-    // Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/
+    // E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov
+    // Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov
     // -------------------------------------------------------------------------------
     //
 
     internal static class Program
     {
 
-        public const string PROGRAM_DATE = "March 7, 2018";
+        public const string PROGRAM_DATE = "May 8, 2018";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -293,8 +293,8 @@ namespace DataPackage_Archive_Manager
                 Console.WriteLine("Version: " + GetAppVersion());
                 Console.WriteLine();
 
-                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com");
-                Console.WriteLine("Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/");
+                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov");
+                Console.WriteLine("Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov");
                 Console.WriteLine();
 
                 // Delay for 1500 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
