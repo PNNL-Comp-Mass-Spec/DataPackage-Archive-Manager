@@ -1,10 +1,8 @@
 @echo off
 c:
-cd C:\DMS_Programs\DMSUpdateManager
-
-call DMSUpdateManager.exe /P:DMSUpdateManagerOptions.xml
-
 cd C:\DMS_Programs\DataPackage_Archive_Manager
+
+call ..\DMSUpdateManager\DMSUpdateManagerConsole.exe /P:..\DMSUpdateManagerOptions_DataPkgArchiveMgr.xml %1 %2 %3
 
 echo Upload files from data package ID 388 or higher
 echo Filtering to only trigger an upload if the data package has a file modified after 9/26/2013
