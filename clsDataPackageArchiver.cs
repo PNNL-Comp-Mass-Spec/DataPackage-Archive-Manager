@@ -509,7 +509,7 @@ namespace DataPackage_Archive_Manager
 
                                 if (dctURIs.ContainsKey(statusNum))
                                 {
-                                    var msg = "Error, StatusNum " + statusNum + " is definied for multiple data packages";
+                                    var msg = "Error, StatusNum " + statusNum + " is defined for multiple data packages";
                                     ReportError(msg, true);
                                     continue;
                                 }
@@ -977,7 +977,10 @@ namespace DataPackage_Archive_Manager
 
                         ReportMessage(
                             "Data package " + dataPkgInfo.ID +
-                            " was previously uploaded to MyEMSL, yet the Metadata query did not return any files for this dataset.  Skipping this data package to prevent the addition of duplicate files to MyEMSL",
+                            " was previously uploaded to MyEMSL, yet the Metadata query did not return any files for this dataset." +
+                            " Skipping this data package to prevent the addition of duplicate files to MyEMSL." +
+                            " To allow this upload, change ErrorCode to 101 in DMS_Data_Package.dbo.T_MyEMSL_Uploads"
+                            ,
                             BaseLogger.LogLevels.ERROR, logToDB);
 
                         return false;
@@ -1228,7 +1231,7 @@ namespace DataPackage_Archive_Manager
         }
 
         /// <summary>
-        /// Update values for Available and Verified in the Data_Package databse
+        /// Update values for Available and Verified in the Data_Package database
         /// </summary>
         /// <param name="statusInfo"></param>
         /// <param name="verified"></param>
@@ -1450,7 +1453,7 @@ namespace DataPackage_Archive_Manager
 
                     }
 
-                    // Prepopulate lstDataPackageInfoCache with the files for the current group
+                    // Pre-populate lstDataPackageInfoCache with the files for the current group
                     dataPackageInfoCache.RefreshInfo();
 
                     foreach (var statusInfo in dctURIsInGroup)
@@ -1647,9 +1650,9 @@ namespace DataPackage_Archive_Manager
             var msg = "Upload complete";
 
             // Note that e.ServerResponse will simply have the StatusURL if the upload succeeded
-            // If a problem occurred, then e.ServerResponse will either have the full server reponse, or may even be blank
+            // If a problem occurred, then e.ServerResponse will either have the full server response, or may even be blank
             if (string.IsNullOrEmpty(e.ServerResponse))
-                msg += ": empty server reponse";
+                msg += ": empty server response";
             else
                 msg += ": " + e.ServerResponse;
 

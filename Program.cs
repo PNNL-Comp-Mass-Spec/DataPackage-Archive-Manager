@@ -19,7 +19,7 @@ namespace DataPackage_Archive_Manager
     internal static class Program
     {
 
-        public const string PROGRAM_DATE = "May 8, 2018";
+        public const string PROGRAM_DATE = "September 13, 2018";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -162,7 +162,7 @@ namespace DataPackage_Archive_Manager
                         badArguments.Add("/" + item);
                     }
 
-                    ShowErrorMessage("Invalid commmand line parameters", badArguments);
+                    ShowErrorMessage("Invalid command line parameters", badArguments);
 
                     return false;
                 }
