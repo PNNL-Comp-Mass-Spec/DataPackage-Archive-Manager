@@ -19,7 +19,7 @@ namespace DataPackage_Archive_Manager
     internal static class Program
     {
 
-        public const string PROGRAM_DATE = "September 13, 2018";
+        public const string PROGRAM_DATE = "September 21, 2018";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -69,7 +69,7 @@ namespace DataPackage_Archive_Manager
 
                 }
 
-                var updatesArePending = clsWindowsUpdateStatus.UpdatesArePending(out var pendingWindowsUpdateMessage);
+                var updatesArePending = WindowsUpdateStatus.UpdatesArePending(out var pendingWindowsUpdateMessage);
 
                 if (updatesArePending)
                 {

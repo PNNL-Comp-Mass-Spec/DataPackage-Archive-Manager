@@ -15,7 +15,7 @@ using Utilities = Pacifica.Core.Utilities;
 
 namespace DataPackage_Archive_Manager
 {
-    class clsDataPackageArchiver : clsEventNotifier
+    class clsDataPackageArchiver : EventNotifier
     {
         #region "Constants"
 
@@ -81,7 +81,7 @@ namespace DataPackage_Archive_Manager
 
         #region "Class variables"
 
-        private readonly clsExecuteDatabaseSP m_ExecuteSP;
+        private readonly ExecuteDatabaseSP m_ExecuteSP;
         private readonly Upload mMyEMSLUploader;
         private DateTime mLastStatusUpdate;
 
@@ -125,7 +125,7 @@ namespace DataPackage_Archive_Manager
             DBConnectionString = connectionString;
             LogLevel = logLevel;
 
-            m_ExecuteSP = new clsExecuteDatabaseSP(DBConnectionString);
+            m_ExecuteSP = new ExecuteDatabaseSP(DBConnectionString);
             RegisterEvents(m_ExecuteSP);
 
             var pacificaConfig = new Configuration();
