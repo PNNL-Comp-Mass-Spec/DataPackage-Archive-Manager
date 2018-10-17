@@ -39,7 +39,7 @@ namespace DataPackage_Archive_Manager
         {
             var commandLineParser = new clsParseCommandLine();
 
-            mDBConnectionString = clsDataPackageArchiver.CONNECTION_STRING;
+            mDBConnectionString = DataPackageArchiver.CONNECTION_STRING;
             mLogLevel = BaseLogger.LogLevels.INFO;
 
             mDataPkgIDList = string.Empty;
@@ -78,7 +78,7 @@ namespace DataPackage_Archive_Manager
                     return 0;
                 }
 
-                var archiver = new clsDataPackageArchiver(mDBConnectionString, mLogLevel)
+                var archiver = new DataPackageArchiver(mDBConnectionString, mLogLevel)
                 {
                     SkipCheckExisting = mSkipCheckExisting,
                     TraceMode = mTraceMode
@@ -184,7 +184,9 @@ namespace DataPackage_Archive_Manager
                             mDateThreshold = dtThreshold;
                         }
                         else
+                        {
                             ShowErrorMessage("Invalid date specified with /D:" + strValue);
+                        }
                     }
 
                 }
@@ -282,7 +284,7 @@ namespace DataPackage_Archive_Manager
                 Console.WriteLine("Use /Preview to preview any files that would be uploaded");
                 Console.WriteLine("");
                 Console.WriteLine("Use /V to verify recently uploaded data packages and skip looking for new/changed files");
-                Console.WriteLine("Use /DB to override the default connection string of " + clsDataPackageArchiver.CONNECTION_STRING);
+                Console.WriteLine("Use /DB to override the default connection string of " + DataPackageArchiver.CONNECTION_STRING);
                 Console.WriteLine();
                 Console.WriteLine("Use /SkipCheckExisting to skip the check for data package files that are known to exist in MyEMSL and should be visible by a metadata query; if this switch is used, you risk pushing duplicate data files into MyEMSL");
                 Console.WriteLine();

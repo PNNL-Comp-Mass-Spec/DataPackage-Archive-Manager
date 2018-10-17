@@ -2,7 +2,7 @@
 
 namespace DataPackage_Archive_Manager
 {
-    class clsDataPackageInfo
+    class DataPackageInfo
     {
         public int ID { get; }			            // Data Package ID
         public string Name { get; set; }            // Data Package Name
@@ -20,7 +20,7 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Constructor
         /// </summary>
-        public clsDataPackageInfo(int dataPkgID)
+        public DataPackageInfo(int dataPkgID)
         {
             ID = dataPkgID;
             Name = string.Empty;

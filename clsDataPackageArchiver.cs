@@ -15,7 +15,7 @@ using Utilities = Pacifica.Core.Utilities;
 
 namespace DataPackage_Archive_Manager
 {
-    class clsDataPackageArchiver : EventNotifier
+    class DataPackageArchiver : EventNotifier
     {
         #region "Constants"
 
@@ -24,7 +24,7 @@ namespace DataPackage_Archive_Manager
         private const string SP_NAME_STORE_MYEMSL_STATS = "StoreMyEMSLUploadStats";
         private const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "SetMyEMSLUploadStatus";
 
-        private enum eUploadStatus
+        private enum UploadStatus
         {
             Success = 0,
             VerificationError = 1,
@@ -44,7 +44,7 @@ namespace DataPackage_Archive_Manager
         #endregion
 
         #region "Structures"
-        private struct udtMyEMSLStatusInfo
+        private struct MyEMSLStatusInfo
         {
             public int EntryID;
             public int DataPackageID;
@@ -55,7 +55,7 @@ namespace DataPackage_Archive_Manager
             public string LocalPath;
         }
 
-        private struct udtMyEMSLUploadInfo
+        private struct MyEMSLUploadInfo
         {
             public string SubDir;
             public int FileCountNew;
@@ -118,7 +118,7 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Constructor
         /// </summary>
-        public clsDataPackageArchiver(string connectionString, BaseLogger.LogLevels logLevel)
+        public DataPackageArchiver(string connectionString, BaseLogger.LogLevels logLevel)
         {
             // Typically:
             // Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;
@@ -145,7 +145,7 @@ namespace DataPackage_Archive_Manager
             return (short)(value ? 1 : 0);
         }
 
-        private int CountFilesForDataPackage(clsDataPackageInfo dataPkgInfo)
+        private int CountFilesForDataPackage(DataPackageInfo dataPkgInfo)
         {
             var diDataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
             if (!diDataPkg.Exists)
@@ -155,15 +155,15 @@ namespace DataPackage_Archive_Manager
         }
 
         private List<FileInfoObject> FindDataPackageFilesToArchive(
-            clsDataPackageInfo dataPkgInfo,
+            DataPackageInfo dataPkgInfo,
             DirectoryInfo diDataPkg,
             DateTime dateThreshold,
             DataPackageListInfo dataPackageInfoCache,
-            out udtMyEMSLUploadInfo uploadInfo)
+            out MyEMSLUploadInfo uploadInfo)
         {
             var lstDatasetFilesToArchive = new List<FileInfoObject>();
 
-            uploadInfo = new udtMyEMSLUploadInfo();
+            uploadInfo = new MyEMSLUploadInfo();
             uploadInfo.Clear();
 
             uploadInfo.SubDir = dataPkgInfo.FolderName;
@@ -364,7 +364,7 @@ namespace DataPackage_Archive_Manager
 
         private static void AddFileIfArchiveRequired(
             DirectoryInfo diDataPkg,
-            ref udtMyEMSLUploadInfo uploadInfo,
+            ref MyEMSLUploadInfo uploadInfo,
             ICollection<FileInfoObject> lstDatasetFilesToArchive,
             FileInfo fiLocalFile,
             ICollection<DatasetFolderOrFileInfo> archiveFiles)
@@ -463,8 +463,8 @@ namespace DataPackage_Archive_Manager
             return (string)value;
         }
 
-        private IEnumerable<clsDataPackageInfo> GetFilteredDataPackageInfoList(
-            IEnumerable<clsDataPackageInfo> lstDataPkgInfo,
+        private IEnumerable<DataPackageInfo> GetFilteredDataPackageInfoList(
+            IEnumerable<DataPackageInfo> lstDataPkgInfo,
             IEnumerable<int> dataPkgGroup)
         {
             var lstFilteredDataPkgInfo =
@@ -475,9 +475,9 @@ namespace DataPackage_Archive_Manager
             return lstFilteredDataPkgInfo;
         }
 
-        private Dictionary<int, udtMyEMSLStatusInfo> GetStatusURIs(int retryCount)
+        private Dictionary<int, MyEMSLStatusInfo> GetStatusURIs(int retryCount)
         {
-            var dctURIs = new Dictionary<int, udtMyEMSLStatusInfo>();
+            var dctURIs = new Dictionary<int, MyEMSLStatusInfo>();
 
             try
             {
@@ -498,7 +498,7 @@ namespace DataPackage_Archive_Manager
 
                             while (reader.Read())
                             {
-                                var statusInfo = new udtMyEMSLStatusInfo
+                                var statusInfo = new MyEMSLStatusInfo
                                 {
                                     EntryID = reader.GetInt32(0),
                                     DataPackageID = reader.GetInt32(1),
@@ -570,9 +570,9 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        private List<clsDataPackageInfo> LookupDataPkgInfo(IReadOnlyList<KeyValuePair<int, int>> lstDataPkgIDs)
+        private List<DataPackageInfo> LookupDataPkgInfo(IReadOnlyList<KeyValuePair<int, int>> lstDataPkgIDs)
         {
-            var lstDataPkgInfo = new List<clsDataPackageInfo>();
+            var lstDataPkgInfo = new List<DataPackageInfo>();
 
             try
             {
@@ -616,7 +616,7 @@ namespace DataPackage_Archive_Manager
                         {
                             var dataPkgID = reader.GetInt32(0);
 
-                            var dataPkgInfo = new clsDataPackageInfo(dataPkgID)
+                            var dataPkgInfo = new DataPackageInfo(dataPkgID)
                             {
                                 Name = GetDBString(reader, "Name"),
                                 OwnerPRN = GetDBString(reader, "Owner"),
@@ -647,7 +647,7 @@ namespace DataPackage_Archive_Manager
                 // Include the stack trace in the log
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, "Detail for error in LookupDataPkgInfo", ex);
 
-                return new List<clsDataPackageInfo>();
+                return new List<DataPackageInfo>();
             }
 
         }
@@ -730,7 +730,7 @@ namespace DataPackage_Archive_Manager
         public bool ProcessDataPackages(List<KeyValuePair<int, int>> lstDataPkgIDs, DateTime dateThreshold)
         {
 
-            List<clsDataPackageInfo> lstDataPkgInfo;
+            List<DataPackageInfo> lstDataPkgInfo;
             var successCount = 0;
 
             try
@@ -837,7 +837,7 @@ namespace DataPackage_Archive_Manager
                     ReportMessage("Querying MyEMSL for " + dataPkgGroup.Count + " data packages in group " + groupNumber + " of " + lstDataPkgGroups.Count);
                     dataPackageInfoCache.RefreshInfo();
 
-                    // Obtain the clsDataPackageInfo objects for the IDs in dataPkgGroup
+                    // Obtain the DataPackageInfo objects for the IDs in dataPkgGroup
                     var lstFilteredDataPkgInfo = GetFilteredDataPackageInfoList(lstDataPkgInfo, dataPkgGroup);
 
                     foreach (var dataPkgInfo in lstFilteredDataPkgInfo)
@@ -890,12 +890,12 @@ namespace DataPackage_Archive_Manager
         }
 
         private bool ProcessOneDataPackage(
-            clsDataPackageInfo dataPkgInfo,
+            DataPackageInfo dataPkgInfo,
             DateTime dateThreshold,
             DataPackageListInfo dataPackageInfoCache)
         {
             var success = false;
-            var uploadInfo = new udtMyEMSLUploadInfo();
+            var uploadInfo = new MyEMSLUploadInfo();
             uploadInfo.Clear();
 
             var dtStartTime = DateTime.UtcNow;
@@ -1175,7 +1175,7 @@ namespace DataPackage_Archive_Manager
             return success;
         }
 
-        private bool StoreMyEMSLUploadStats(clsDataPackageInfo dataPkgInfo, udtMyEMSLUploadInfo uploadInfo)
+        private bool StoreMyEMSLUploadStats(DataPackageInfo dataPkgInfo, MyEMSLUploadInfo uploadInfo)
         {
 
             try
@@ -1236,7 +1236,7 @@ namespace DataPackage_Archive_Manager
         /// <param name="statusInfo"></param>
         /// <param name="verified"></param>
         /// <returns>Assumes that Available = true</returns>
-        private bool UpdateMyEMSLUploadStatus(udtMyEMSLStatusInfo statusInfo, bool verified)
+        private bool UpdateMyEMSLUploadStatus(MyEMSLStatusInfo statusInfo, bool verified)
         {
 
             try
@@ -1434,7 +1434,7 @@ namespace DataPackage_Archive_Manager
 
                     RegisterEvents(dataPackageInfoCache);
 
-                    var dctURIsInGroup = new Dictionary<int, udtMyEMSLStatusInfo>();
+                    var dctURIsInGroup = new Dictionary<int, MyEMSLStatusInfo>();
 
                     for (var j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
                     {
@@ -1460,7 +1460,7 @@ namespace DataPackage_Archive_Manager
                     {
                         var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache);
 
-                        if (eResult == eUploadStatus.CriticalError)
+                        if (eResult == UploadStatus.CriticalError)
                             return false;
                     }
                 }
@@ -1475,9 +1475,9 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        private eUploadStatus VerifyUploadStatusWork(
+        private UploadStatus VerifyUploadStatusWork(
             MyEMSLStatusCheck statusChecker,
-            KeyValuePair<int, udtMyEMSLStatusInfo> statusInfo,
+            KeyValuePair<int, MyEMSLStatusInfo> statusInfo,
             DataPackageListInfo dataPackageInfoCache)
         {
             var exceptionCount = 0;
@@ -1501,13 +1501,13 @@ namespace DataPackage_Archive_Manager
                 if (lookupError)
                 {
                     ReportError("Error looking up archive status for " + dataPackageAndEntryId + "; " + errorMessage, true);
-                    return eUploadStatus.VerificationError;
+                    return UploadStatus.VerificationError;
                 }
 
                 if (serverResponse.Keys.Count == 0)
                 {
                     ReportError("Empty JSON server response for " + dataPackageAndEntryId);
-                    return eUploadStatus.VerificationError;
+                    return UploadStatus.VerificationError;
                 }
 
                 if (serverResponse.TryGetValue("state", out var ingestState))
@@ -1522,14 +1522,14 @@ namespace DataPackage_Archive_Manager
                             ReportError(errorMessage);
                         }
 
-                        return eUploadStatus.VerificationError;
+                        return UploadStatus.VerificationError;
                     }
 
                 }
                 else
                 {
                     ReportError("State parameter not found in ingest status; see " + statusInfo.Value.StatusURI);
-                    return eUploadStatus.VerificationError;
+                    return UploadStatus.VerificationError;
                 }
 
                 if (percentComplete < 100)
@@ -1542,7 +1542,7 @@ namespace DataPackage_Archive_Manager
                     }
 
                     // Even though it is not yet available, we report Success
-                    return eUploadStatus.Success;
+                    return UploadStatus.Success;
                 }
 
                 var archiveFiles = dataPackageInfoCache.FindFiles("*", "", statusInfo.Value.DataPackageID);
@@ -1561,7 +1561,7 @@ namespace DataPackage_Archive_Manager
                     UpdateMyEMSLUploadStatus(statusInfo.Value, verified: false);
 
                     // Even though it is not yet available, we report Success
-                    return eUploadStatus.Success;
+                    return UploadStatus.Success;
                 }
 
                 var diDataPkg = new DirectoryInfo(statusInfo.Value.LocalPath);
@@ -1576,7 +1576,7 @@ namespace DataPackage_Archive_Manager
 
                     UpdateMyEMSLUploadStatus(statusInfo.Value, verified: false);
 
-                    return eUploadStatus.Success;
+                    return UploadStatus.Success;
                 }
 
                 if (diDataPkg.Parent == null)
@@ -1626,11 +1626,11 @@ namespace DataPackage_Archive_Manager
                         statusInfo.Value.EntryID + ": " + ex.Message, true);
 
                     // Too many errors for this data package; move on to the next one
-                    return eUploadStatus.VerificationError;
+                    return UploadStatus.VerificationError;
                 }
             }
 
-            return eUploadStatus.Success;
+            return UploadStatus.Success;
         }
 
         #region "Event Handlers"
