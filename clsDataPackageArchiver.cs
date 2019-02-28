@@ -367,7 +367,7 @@ namespace DataPackage_Archive_Manager
             ref MyEMSLUploadInfo uploadInfo,
             ICollection<FileInfoObject> lstDatasetFilesToArchive,
             FileInfo fiLocalFile,
-            ICollection<DatasetFolderOrFileInfo> archiveFiles)
+            ICollection<DatasetDirectoryOrFileInfo> archiveFiles)
         {
 
             if (archiveFiles.Count == 0)
