@@ -41,6 +41,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Lib\Pacifica.Core.dll</HintPath>
     </Reference>
+    <Reference Include="Pacifica.Upload">
+      <HintPath>Lib\Pacifica.Upload.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />

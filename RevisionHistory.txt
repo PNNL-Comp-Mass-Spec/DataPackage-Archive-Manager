@@ -1,5 +1,9 @@
 Data Package Archive Manager Change Log
 
+Version 1.0.7003; March 5, 2019
+	- Obtain SharpZipLib from NuGet
+	- Add Pacifica.Upload.dll
+
 Version 1.0.6830; September 13, 2018
 	- Update comments and log messages
 

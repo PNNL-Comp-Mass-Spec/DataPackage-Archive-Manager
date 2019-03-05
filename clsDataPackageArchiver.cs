@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Data.SqlClient;
 using MyEMSLReader;
 using Pacifica.Core;
+using Pacifica.Upload;
 using PRISM;
 using PRISM.Logging;
 using Utilities = Pacifica.Core.Utilities;
