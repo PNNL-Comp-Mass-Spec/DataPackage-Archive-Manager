@@ -19,7 +19,7 @@ namespace DataPackage_Archive_Manager
     internal static class Program
     {
 
-        public const string PROGRAM_DATE = "March 5, 2019";
+        public const string PROGRAM_DATE = "May 7, 2019";
 
         /// <summary>
         /// Gigasax.DMS_Data_Package
@@ -257,7 +257,7 @@ namespace DataPackage_Archive_Manager
                 formattedMessage += Environment.NewLine + "  " + item;
             }
 
-            ConsoleMsgUtils.ShowError(formattedMessage, true, false);
+            ConsoleMsgUtils.ShowErrorCustom(formattedMessage, true, false);
         }
 
         private static void ShowProgramHelp()
