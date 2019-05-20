@@ -312,9 +312,9 @@ namespace DataPackage_Archive_Manager
 
         #region "Event Handlers"
 
-        private static void Archiver_DebugEvent(string strMessage)
+        private static void Archiver_DebugEvent(string message)
         {
-            ConsoleMsgUtils.ShowDebug(strMessage);
+            ConsoleMsgUtils.ShowDebug(message);
         }
 
         private static void Archiver_ErrorEvent(string errorMessage, Exception ex)
@@ -322,14 +322,14 @@ namespace DataPackage_Archive_Manager
             ConsoleMsgUtils.ShowError(errorMessage, ex);
         }
 
-        private static void Archiver_StatusEvent(string strMessage)
+        private static void Archiver_StatusEvent(string message)
         {
-            Console.WriteLine(strMessage);
+            Console.WriteLine(message);
         }
 
-        private static void Archiver_WarningEvent(string strMessage)
+        private static void Archiver_WarningEvent(string message)
         {
-            ConsoleMsgUtils.ShowWarning(strMessage);
+            ConsoleMsgUtils.ShowWarning(message);
         }
 
         #endregion
