@@ -487,9 +487,16 @@ namespace DataPackage_Archive_Manager
 
             try
             {
-                const string sql = " SELECT MU.Entry_ID, MU.Data_Package_ID, MU.Entered, MU.StatusNum, MU.Status_URI, DP.Local_Path, DP.Share_Path " +
-                                   " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.Data_Package_ID = DP.ID" +
-                                   " WHERE MU.ErrorCode = 0 And (MU.Available = 0 Or MU.Verified = 0) AND ISNULL(MU.StatusNum, 0) > 0";
+                var dateThreshold = DateTime.Now.AddDays(-45);
+
+                var sql = string.Format(
+                    " SELECT MU.Entry_ID, MU.Data_Package_ID, MU.Entered, MU.StatusNum, MU.Status_URI, DP.Local_Path, DP.Share_Path " +
+                    " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.Data_Package_ID = DP.ID" +
+                    " WHERE MU.ErrorCode = 0 AND " +
+                    "       (MU.Available = 0 Or MU.Verified = 0) AND " +
+                    "       ISNULL(MU.StatusNum, 0) > 0 AND" +
+                    "       Entered >= '{0:yyyy-MM-dd}'",
+                    dateThreshold);
 
                 while (retryCount > 0)
                 {
