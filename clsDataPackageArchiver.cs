@@ -91,6 +91,11 @@ namespace DataPackage_Archive_Manager
         #region "Auto properties"
 
         /// <summary>
+        /// When true, skip verifying upload status
+        /// </summary>
+        public bool DisableVerify { get; set; }
+
+        /// <summary>
         /// Gigasax.DMS_Data_Package database
         /// </summary>
         public string DBConnectionString { get; }
@@ -1169,6 +1174,9 @@ namespace DataPackage_Archive_Manager
 
             // Upload new data
             var success = ProcessDataPackages(lstDataPkgIDs, dateThreshold);
+
+            if (DisableVerify)
+                return success;
 
             // Verify uploaded data (even if success is false)
             VerifyUploadStatus();

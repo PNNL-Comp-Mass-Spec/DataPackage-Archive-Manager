@@ -30,6 +30,7 @@ namespace DataPackage_Archive_Manager
         private static string mDataPkgIDList;
         private static DateTime mDateThreshold;
 
+        private static bool mDisableVerify;
         private static bool mPreviewMode;
         private static bool mSkipCheckExisting;
         private static bool mTraceMode;
@@ -44,6 +45,8 @@ namespace DataPackage_Archive_Manager
 
             mDataPkgIDList = string.Empty;
             mDateThreshold = DateTime.MinValue;
+
+            mDisableVerify = false;
             mPreviewMode = false;
             mSkipCheckExisting = false;
             mTraceMode = false;
@@ -80,6 +83,7 @@ namespace DataPackage_Archive_Manager
 
                 var archiver = new DataPackageArchiver(mDBConnectionString, mLogLevel)
                 {
+                    DisableVerify = mDisableVerify,
                     SkipCheckExisting = mSkipCheckExisting,
                     TraceMode = mTraceMode
                 };
@@ -149,7 +153,7 @@ namespace DataPackage_Archive_Manager
         private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
         {
             // Returns True if no problems; otherwise, returns false
-            var lstValidParameters = new List<string> { "D", "Preview", "V", "Trace", "Debug", "DB", "SkipCheckExisting" };
+            var lstValidParameters = new List<string> { "D", "Preview", "V", "Trace", "Debug", "DB", "DisableVerify", "NoVerify", "SkipCheckExisting" };
 
             try
             {
@@ -194,6 +198,12 @@ namespace DataPackage_Archive_Manager
                 if (commandLineParser.IsParameterPresent("Preview"))
                 {
                     mPreviewMode = true;
+                }
+
+                if (commandLineParser.IsParameterPresent("DisableVerify") ||
+                    commandLineParser.IsParameterPresent("NoVerify"))
+                {
+                    mDisableVerify = true;
                 }
 
                 if (commandLineParser.IsParameterPresent("SkipCheckExisting"))
@@ -273,7 +283,7 @@ namespace DataPackage_Archive_Manager
 
                 Console.WriteLine(
                     " DataPackageIDList [/D:DateThreshold] [/Preview] [/V] " +
-                    "[/DB:ConnectionString] [/Trace] [/Debug]");
+                    "[/DB:ConnectionString] [/Trace] [/Debug] [/SkipCheckExisting] [/NoVerify]");
 
                 Console.WriteLine();
                 Console.WriteLine("DataPackageIDList can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages");
@@ -287,6 +297,8 @@ namespace DataPackage_Archive_Manager
                 Console.WriteLine("Use /DB to override the default connection string of " + DataPackageArchiver.CONNECTION_STRING);
                 Console.WriteLine();
                 Console.WriteLine("Use /SkipCheckExisting to skip the check for data package files that are known to exist in MyEMSL and should be visible by a metadata query; if this switch is used, you risk pushing duplicate data files into MyEMSL");
+                Console.WriteLine();
+                Console.WriteLine("Use /NoVerify to skip verifying the upload status of data previously uploaded to MyEMSL but not yet verified");
                 Console.WriteLine();
                 Console.WriteLine("Use /Trace to show additional log messages");
                 Console.WriteLine("Use /Debug to enable the display (and logging) of debug messages; auto-enables /Trace");
