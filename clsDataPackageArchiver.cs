@@ -6,12 +6,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Data.SqlClient;
 using MyEMSLReader;
 using Pacifica.Core;
 using Pacifica.Upload;
 using PRISM;
 using PRISM.Logging;
+using PRISMDatabaseUtils;
 using Utilities = Pacifica.Core.Utilities;
 
 namespace DataPackage_Archive_Manager
@@ -82,7 +82,7 @@ namespace DataPackage_Archive_Manager
 
         #region "Class variables"
 
-        private readonly ExecuteDatabaseSP m_ExecuteSP;
+        private readonly IDBTools mDBTools;
         private readonly Upload mMyEMSLUploader;
         private DateTime mLastStatusUpdate;
 
@@ -131,8 +131,8 @@ namespace DataPackage_Archive_Manager
             DBConnectionString = connectionString;
             LogLevel = logLevel;
 
-            m_ExecuteSP = new ExecuteDatabaseSP(DBConnectionString);
-            RegisterEvents(m_ExecuteSP);
+            mDBTools = DbToolsFactory.GetDBTools(DBConnectionString);
+            RegisterEvents(mDBTools);
 
             var pacificaConfig = new Configuration();
 
@@ -212,7 +212,6 @@ namespace DataPackage_Archive_Manager
                 if (skipFolder)
                     lstDataPackageFoldersToSkip.Add(dataPkgFolder.FullName);
             }
-
 
             // Filter out files that we do not want to archive
             var lstFilesToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase)
@@ -436,37 +435,6 @@ namespace DataPackage_Archive_Manager
                     uploadInfo.Bytes += fiLocalFile.Length;
                 }
             }
-
-        }
-
-        private DateTime GetDBDate(IDataRecord reader, string columnName)
-        {
-            var value = reader[columnName];
-
-            if (Convert.IsDBNull(value))
-                return DateTime.Now;
-
-            return (DateTime)value;
-        }
-
-        private int GetDBInt(IDataRecord reader, string columnName)
-        {
-            var value = reader[columnName];
-
-            if (Convert.IsDBNull(value))
-                return 0;
-
-            return (int)value;
-        }
-
-        private string GetDBString(IDataRecord reader, string columnName)
-        {
-            var value = reader[columnName];
-
-            if (Convert.IsDBNull(value))
-                return string.Empty;
-
-            return (string)value;
         }
 
         private IEnumerable<DataPackageInfo> GetFilteredDataPackageInfoList(
@@ -484,82 +452,47 @@ namespace DataPackage_Archive_Manager
         private Dictionary<int, MyEMSLStatusInfo> GetStatusURIs(int retryCount)
         {
             var dctURIs = new Dictionary<int, MyEMSLStatusInfo>();
+            var dateThreshold = DateTime.Now.AddDays(-45);
 
-            try
+            var sql = string.Format(
+                " SELECT MU.Entry_ID, MU.Data_Package_ID, MU.Entered, MU.StatusNum, MU.Status_URI, DP.Local_Path, DP.Share_Path " +
+                " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.Data_Package_ID = DP.ID" +
+                " WHERE MU.ErrorCode = 0 AND " +
+                "       (MU.Available = 0 Or MU.Verified = 0) AND " +
+                "       ISNULL(MU.StatusNum, 0) > 0 AND" +
+                "       Entered >= '{0:yyyy-MM-dd}'",
+                dateThreshold);
+
+            var success = mDBTools.GetQueryResultsDataTable(sql, out var table, retryCount: (short) retryCount);
+
+            foreach (DataRow row in table.Rows)
             {
-                var dateThreshold = DateTime.Now.AddDays(-45);
-
-                var sql = string.Format(
-                    " SELECT MU.Entry_ID, MU.Data_Package_ID, MU.Entered, MU.StatusNum, MU.Status_URI, DP.Local_Path, DP.Share_Path " +
-                    " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.Data_Package_ID = DP.ID" +
-                    " WHERE MU.ErrorCode = 0 AND " +
-                    "       (MU.Available = 0 Or MU.Verified = 0) AND " +
-                    "       ISNULL(MU.StatusNum, 0) > 0 AND" +
-                    "       Entered >= '{0:yyyy-MM-dd}'",
-                    dateThreshold);
-
-                while (retryCount > 0)
+                var statusInfo = new MyEMSLStatusInfo
                 {
-                    try
-                    {
-                        using (var cnDB = new SqlConnection(DBConnectionString))
-                        {
-                            cnDB.Open();
+                    EntryID = row[0].CastDBVal<int>(),
+                    DataPackageID = row[1].CastDBVal<int>(),
+                    Entered = row[2].CastDBVal<DateTime>(DateTime.Now)
+                };
 
-                            var cmd = new SqlCommand(sql, cnDB);
-                            var reader = cmd.ExecuteReader();
+                var statusNum = row[3].CastDBVal<int>();
 
-                            while (reader.Read())
-                            {
-                                var statusInfo = new MyEMSLStatusInfo
-                                {
-                                    EntryID = reader.GetInt32(0),
-                                    DataPackageID = reader.GetInt32(1),
-                                    Entered = reader.GetDateTime(2)
-                                };
-
-                                var statusNum = reader.GetInt32(3);
-
-                                if (dctURIs.ContainsKey(statusNum))
-                                {
-                                    var msg = "Error, StatusNum " + statusNum + " is defined for multiple data packages";
-                                    ReportError(msg, true);
-                                    continue;
-                                }
-
-                                if (!Convert.IsDBNull(reader.GetValue(4)))
-                                {
-                                    var statusURI = (string)reader.GetValue(4);
-                                    if (!string.IsNullOrEmpty(statusURI))
-                                    {
-                                        statusInfo.StatusURI = statusURI;
-
-                                        statusInfo.SharePath = GetDBString(reader, "Share_Path");
-                                        statusInfo.LocalPath = GetDBString(reader, "Local_Path");
-
-                                        dctURIs.Add(statusNum, statusInfo);
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        retryCount -= 1;
-                        var msg = "Exception querying database in GetStatusURIs: " + ex.Message;
-                        msg += ", RetryCount = " + retryCount;
-                        ReportError(msg, true, ex);
-
-                        // Delay for 5 second before trying again
-                        System.Threading.Thread.Sleep(5000);
-                    }
+                if (dctURIs.ContainsKey(statusNum))
+                {
+                    var msg = "Error, StatusNum " + statusNum + " is defined for multiple data packages";
+                    ReportError(msg, true);
+                    continue;
                 }
-            }
-            catch (Exception ex)
-            {
-                var msg = "Exception connecting to database in GetStatusURIs: " + ex.Message + "; ConnectionString: " + DBConnectionString;
-                ReportError(msg, ex);
+
+                var statusURI = row[4].CastDBVal<string>("");
+                if (!string.IsNullOrWhiteSpace(statusURI))
+                {
+                    statusInfo.StatusURI = statusURI;
+
+                    statusInfo.SharePath = row["Share_Path"].CastDBVal<string>();
+                    statusInfo.LocalPath = row["Local_Path"].CastDBVal<string>();
+
+                    dctURIs.Add(statusNum, statusInfo);
+                }
             }
 
             return dctURIs;
@@ -586,83 +519,59 @@ namespace DataPackage_Archive_Manager
         private List<DataPackageInfo> LookupDataPkgInfo(IReadOnlyList<KeyValuePair<int, int>> lstDataPkgIDs)
         {
             var lstDataPkgInfo = new List<DataPackageInfo>();
+            var sql = new StringBuilder();
 
-            try
+            sql.Append(" SELECT ID, Name, Owner, Instrument, " +
+                       " EUS_Person_ID, EUS_Proposal_ID, EUS_Instrument_ID, Created, " +
+                       " Package_File_Folder, Share_Path, Local_Path, MyEMSL_Uploads " +
+                       " FROM V_Data_Package_Export");
+
+            if (lstDataPkgIDs.Count > 0)
             {
+                sql.Append(" WHERE ");
 
-                using (var cnDB = new SqlConnection(DBConnectionString))
+                for (var i = 0; i < lstDataPkgIDs.Count; i++)
                 {
-                    cnDB.Open();
+                    if (i > 0)
+                        sql.Append(" OR ");
 
-                    var sql = new StringBuilder();
-
-                    sql.Append(" SELECT ID, Name, Owner, Instrument, " +
-                                  " EUS_Person_ID, EUS_Proposal_ID, EUS_Instrument_ID, Created, " +
-                                  " Package_File_Folder, Share_Path, Local_Path, MyEMSL_Uploads " +
-                               " FROM V_Data_Package_Export");
-
-                    if (lstDataPkgIDs.Count > 0)
-                    {
-                        sql.Append(" WHERE ");
-
-                        for (var i = 0; i < lstDataPkgIDs.Count; i++)
-                        {
-                            if (i > 0)
-                                sql.Append(" OR ");
-
-                            if (lstDataPkgIDs[i].Key == lstDataPkgIDs[i].Value)
-                                sql.Append("ID = " + lstDataPkgIDs[i].Key);
-                            else if (lstDataPkgIDs[i].Value < 0)
-                                sql.Append("ID >= " + lstDataPkgIDs[i].Key);
-                            else
-                                sql.Append("ID BETWEEN " + lstDataPkgIDs[i].Key + " AND " + lstDataPkgIDs[i].Value);
-                        }
-
-                    }
-
-                    sql.Append(" ORDER BY ID");
-
-                    using (var cmd = new SqlCommand(sql.ToString(), cnDB))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            var dataPkgID = reader.GetInt32(0);
-
-                            var dataPkgInfo = new DataPackageInfo(dataPkgID)
-                            {
-                                Name = GetDBString(reader, "Name"),
-                                OwnerPRN = GetDBString(reader, "Owner"),
-                                OwnerEUSID = GetDBInt(reader, "EUS_Person_ID"),
-                                EUSProposalID = GetDBString(reader, "EUS_Proposal_ID"),
-                                EUSInstrumentID = GetDBInt(reader, "EUS_Instrument_ID"),
-                                InstrumentName = GetDBString(reader, "Instrument"),
-                                Created = GetDBDate(reader, "Created"),
-                                FolderName = GetDBString(reader, "Package_File_Folder"),
-                                SharePath = GetDBString(reader, "Share_Path"),
-                                LocalPath = GetDBString(reader, "Local_Path"),
-                                MyEMSLUploads = GetDBInt(reader, "MyEMSL_Uploads")
-                            };
-
-                            lstDataPkgInfo.Add(dataPkgInfo);
-                        }
-                    }
-
+                    if (lstDataPkgIDs[i].Key == lstDataPkgIDs[i].Value)
+                        sql.Append("ID = " + lstDataPkgIDs[i].Key);
+                    else if (lstDataPkgIDs[i].Value < 0)
+                        sql.Append("ID >= " + lstDataPkgIDs[i].Key);
+                    else
+                        sql.Append("ID BETWEEN " + lstDataPkgIDs[i].Key + " AND " + lstDataPkgIDs[i].Value);
                 }
 
-                return lstDataPkgInfo;
-
             }
-            catch (Exception ex)
+
+            sql.Append(" ORDER BY ID");
+
+            var success = mDBTools.GetQueryResultsDataTable(sql.ToString(), out var table, retryCount: 1);
+
+            foreach (DataRow row in table.Rows)
             {
-                ReportError("Error in LookupDataPkgInfo: " + ex.Message, true, ex);
+                var dataPkgID = row[0].CastDBVal<int>();
 
-                // Include the stack trace in the log
-                LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, "Detail for error in LookupDataPkgInfo", ex);
+                var dataPkgInfo = new DataPackageInfo(dataPkgID)
+                {
+                    Name = row["Name"].CastDBVal<string>(),
+                    OwnerPRN = row["Owner"].CastDBVal<string>(),
+                    OwnerEUSID = row["EUS_Person_ID"].CastDBVal<int>(),
+                    EUSProposalID = row["EUS_Proposal_ID"].CastDBVal<string>(),
+                    EUSInstrumentID = row["EUS_Instrument_ID"].CastDBVal<int>(),
+                    InstrumentName = row["Instrument"].CastDBVal<string>(),
+                    Created =row["Created"].CastDBVal<DateTime>(DateTime.Now),
+                    FolderName = row["Package_File_Folder"].CastDBVal<string>(),
+                    SharePath = row["Share_Path"].CastDBVal<string>(),
+                    LocalPath = row["Local_Path"].CastDBVal<string>(),
+                    MyEMSLUploads = row["MyEMSL_Uploads"].CastDBVal<int>()
+                };
 
-                return new List<DataPackageInfo>();
+                lstDataPkgInfo.Add(dataPkgInfo);
             }
 
+            return lstDataPkgInfo;
         }
 
         /// <summary>
@@ -1193,40 +1102,26 @@ namespace DataPackage_Archive_Manager
 
         private bool StoreMyEMSLUploadStats(DataPackageInfo dataPkgInfo, MyEMSLUploadInfo uploadInfo)
         {
-
             try
             {
-
                 // Setup for execution of the stored procedure
-                var cmd = new SqlCommand();
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.CommandText = SP_NAME_STORE_MYEMSL_STATS;
+                var cmd = mDBTools.CreateCommand(SP_NAME_STORE_MYEMSL_STATS, CommandType.StoredProcedure);
 
-                    cmd.Parameters.Add(new SqlParameter("@Return", SqlDbType.Int)).Direction = ParameterDirection.ReturnValue;
-
-                    cmd.Parameters.Add(new SqlParameter("@DataPackageID", SqlDbType.Int)).Value = Convert.ToInt32(dataPkgInfo.ID);
-
-                    cmd.Parameters.Add(new SqlParameter("@Subfolder", SqlDbType.VarChar, 128)).Value = uploadInfo.SubDir;
-
-                    cmd.Parameters.Add(new SqlParameter("@FileCountNew", SqlDbType.Int)).Value = uploadInfo.FileCountNew;
-
-                    cmd.Parameters.Add(new SqlParameter("@FileCountUpdated", SqlDbType.Int)).Value = uploadInfo.FileCountUpdated;
-
-                    cmd.Parameters.Add(new SqlParameter("@Bytes", SqlDbType.BigInt)).Value = uploadInfo.Bytes;
-
-                    cmd.Parameters.Add(new SqlParameter("@UploadTimeSeconds", SqlDbType.Real)).Value = (float)uploadInfo.UploadTimeSeconds;
-
-                    cmd.Parameters.Add(new SqlParameter("@StatusURI", SqlDbType.VarChar, 255)).Value = uploadInfo.StatusURI;
-
-                    cmd.Parameters.Add(new SqlParameter("@ErrorCode", SqlDbType.Int)).Value = uploadInfo.ErrorCode;
-                }
+                mDBTools.AddParameter(cmd, "@Return", SqlType.Int, direction: ParameterDirection.ReturnValue);
+                mDBTools.AddParameter(cmd, "@DataPackageID", SqlType.Int, value: Convert.ToInt32(dataPkgInfo.ID));
+                mDBTools.AddParameter(cmd, "@Subfolder", SqlType.VarChar, 128, uploadInfo.SubDir);
+                mDBTools.AddParameter(cmd, "@FileCountNew", SqlType.Int, value: uploadInfo.FileCountNew);
+                mDBTools.AddParameter(cmd, "@FileCountUpdated", SqlType.Int, value: uploadInfo.FileCountUpdated);
+                mDBTools.AddParameter(cmd, "@Bytes", SqlType.BigInt, value: uploadInfo.Bytes);
+                mDBTools.AddParameter(cmd, "@UploadTimeSeconds", SqlType.Real, value: (float)uploadInfo.UploadTimeSeconds);
+                mDBTools.AddParameter(cmd, "@StatusURI", SqlType.VarChar, 255, uploadInfo.StatusURI);
+                mDBTools.AddParameter(cmd, "@ErrorCode", SqlType.Int, value: uploadInfo.ErrorCode);
 
                 ReportMessage("Calling " + SP_NAME_STORE_MYEMSL_STATS + " for Data Package " + dataPkgInfo.ID, BaseLogger.LogLevels.DEBUG);
 
                 // Execute the SP (retry the call up to 4 times)
-                m_ExecuteSP.TimeoutSeconds = 20;
-                var resCode = m_ExecuteSP.ExecuteSP(cmd, 4);
+                cmd.CommandTimeout = 20;
+                var resCode = mDBTools.ExecuteSP(cmd, 4);
 
                 if (resCode == 0)
                 {
@@ -1254,25 +1149,16 @@ namespace DataPackage_Archive_Manager
         /// <returns>Assumes that Available = true</returns>
         private bool UpdateMyEMSLUploadStatus(MyEMSLStatusInfo statusInfo, bool verified)
         {
-
             try
             {
-                var cmd = new SqlCommand(SP_NAME_SET_MYEMSL_UPLOAD_STATUS)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
+                var cmd = mDBTools.CreateCommand(SP_NAME_SET_MYEMSL_UPLOAD_STATUS, CommandType.StoredProcedure);
 
-                cmd.Parameters.Add("@Return", SqlDbType.Int).Direction = ParameterDirection.ReturnValue;
-
-                cmd.Parameters.Add("@EntryID", SqlDbType.Int).Value = statusInfo.EntryID;
-
-                cmd.Parameters.Add("@DataPackageID", SqlDbType.Int).Value = statusInfo.DataPackageID;
-
-                cmd.Parameters.Add("@Available", SqlDbType.TinyInt).Value = BoolToTinyInt(true);
-
-                cmd.Parameters.Add("@Verified", SqlDbType.TinyInt).Value = BoolToTinyInt(verified);
-
-                cmd.Parameters.Add("@message", SqlDbType.VarChar, 512).Direction = ParameterDirection.Output;
+                mDBTools.AddParameter(cmd, "@Return", SqlType.Int, direction: ParameterDirection.ReturnValue);
+                mDBTools.AddTypedParameter(cmd, "@EntryID", SqlType.Int, value: statusInfo.EntryID);
+                mDBTools.AddTypedParameter(cmd, "@DataPackageID", SqlType.Int, value: statusInfo.DataPackageID);
+                mDBTools.AddTypedParameter(cmd, "@Available", SqlType.TinyInt, value: BoolToTinyInt(true));
+                mDBTools.AddTypedParameter(cmd, "@Verified", SqlType.TinyInt, value: BoolToTinyInt(verified));
+                mDBTools.AddParameter(cmd, "@message", SqlType.VarChar, 512, direction: ParameterDirection.Output);
 
                 if (PreviewMode)
                 {
@@ -1282,8 +1168,8 @@ namespace DataPackage_Archive_Manager
 
                 ReportMessage("  Calling " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Data Package " + statusInfo.DataPackageID, BaseLogger.LogLevels.DEBUG);
 
-                m_ExecuteSP.TimeoutSeconds = 20;
-                var resCode = m_ExecuteSP.ExecuteSP(cmd, 2);
+                cmd.CommandTimeout = 20;
+                var resCode = mDBTools.ExecuteSP(cmd, 2);
 
                 if (resCode == 0)
                     return true;
