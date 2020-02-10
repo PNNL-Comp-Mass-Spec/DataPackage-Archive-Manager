@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using PRISM;
+using PRISM.FileProcessor;
 using PRISM.Logging;
 
 namespace DataPackage_Archive_Manager
@@ -19,57 +20,42 @@ namespace DataPackage_Archive_Manager
     internal static class Program
     {
 
-        public const string PROGRAM_DATE = "February 7, 2020";
+        public const string PROGRAM_DATE = "February 10, 2020";
 
-        /// <summary>
-        /// Gigasax.DMS_Data_Package
-        /// </summary>
-        private static string mDBConnectionString;
         private static BaseLogger.LogLevels mLogLevel;
-
-        private static string mDataPkgIDList;
-        private static DateTime mDateThreshold;
-
-        private static bool mDisableVerify;
-        private static bool mPreviewMode;
-        private static bool mSkipCheckExisting;
-        private static bool mTraceMode;
-        private static bool mVerifyOnly;
 
         public static int Main(string[] args)
         {
-            var commandLineParser = new clsParseCommandLine();
-
-            mDBConnectionString = DataPackageArchiver.CONNECTION_STRING;
             mLogLevel = BaseLogger.LogLevels.INFO;
-
-            mDataPkgIDList = string.Empty;
-            mDateThreshold = DateTime.MinValue;
-
-            mDisableVerify = false;
-            mPreviewMode = false;
-            mSkipCheckExisting = false;
-            mTraceMode = false;
-            mVerifyOnly = false;
 
             try
             {
-                var success = false;
+                var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
-                if (commandLineParser.ParseCommandLine())
+                var cmdLineParser = new CommandLineParser<CommandLineOptions>(exeName,
+                    ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE))
                 {
-                    if (SetOptionsUsingCommandLineParameters(commandLineParser))
-                        success = true;
+                    ProgramInfo = "This program uploads new/changed data package files to MyEMSL",
+                    ContactInfo =
+                        "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013" +
+                        Environment.NewLine +
+                        "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
+                        "Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov"
+                };
+
+                var parsed = cmdLineParser.ParseArgs(args, false, false);
+                var options = parsed.ParsedResults;
+                if (!parsed.Success || !options.Validate())
+                {
+                    cmdLineParser.PrintHelp();
+                    // Delay for 1500 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
+                    Thread.Sleep(1500);
+                    return -1;
                 }
 
-                if (!success ||
-                    commandLineParser.NeedToShowHelp ||
-                    commandLineParser.ParameterCount + commandLineParser.NonSwitchParameterCount == 0 ||
-                    mDataPkgIDList.Length == 0)
+                if (options.DebugMode)
                 {
-                    ShowProgramHelp();
-                    return -1;
-
+                    mLogLevel = BaseLogger.LogLevels.DEBUG;
                 }
 
                 var updatesArePending = WindowsUpdateStatus.UpdatesArePending(out var pendingWindowsUpdateMessage);
@@ -81,11 +67,11 @@ namespace DataPackage_Archive_Manager
                     return 0;
                 }
 
-                var archiver = new DataPackageArchiver(mDBConnectionString, mLogLevel)
+                var archiver = new DataPackageArchiver(options.DBConnectionString, mLogLevel)
                 {
-                    DisableVerify = mDisableVerify,
-                    SkipCheckExisting = mSkipCheckExisting,
-                    TraceMode = mTraceMode
+                    DisableVerify = options.DisableVerify,
+                    SkipCheckExisting = options.SkipCheckExisting,
+                    TraceMode = options.TraceMode
                 };
 
                 // Attach the events
@@ -94,7 +80,9 @@ namespace DataPackage_Archive_Manager
                 archiver.StatusEvent += Archiver_StatusEvent;
                 archiver.WarningEvent += Archiver_WarningEvent;
 
-                if (mVerifyOnly)
+                var success = false;
+
+                if (options.VerifyOnly)
                 {
                     // Verify previously updated data
                     success = archiver.VerifyUploadStatus();
@@ -102,26 +90,25 @@ namespace DataPackage_Archive_Manager
                 else
                 {
                     List<KeyValuePair<int, int>> lstDataPkgIDs;
-                    if (mDataPkgIDList.StartsWith("*"))
+                    if (options.PackageIds.StartsWith("*"))
                         // Process all Data Packages by passing an empty list to ParseDataPkgIDList
                         lstDataPkgIDs = new List<KeyValuePair<int, int>>();
                     else
                     {
                         // Parse the data package ID list
-                        lstDataPkgIDs = archiver.ParseDataPkgIDList(mDataPkgIDList);
+                        lstDataPkgIDs = archiver.ParseDataPkgIDList(options.PackageIds);
 
                         if (lstDataPkgIDs.Count == 0)
                         {
                             // Data Package IDs not defined
                             ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
-                            ShowProgramHelp();
+                            cmdLineParser.PrintHelp();
                             return -2;
                         }
                     }
 
                     // Upload new data, then verify previously updated data
-                    success = archiver.StartProcessing(lstDataPkgIDs, mDateThreshold, mPreviewMode);
-
+                    success = archiver.StartProcessing(lstDataPkgIDs, options.DateThreshold, options.PreviewMode);
                 }
 
                 FileLogger.FlushPendingMessages();
@@ -145,181 +132,9 @@ namespace DataPackage_Archive_Manager
             return 0;
         }
 
-        private static string GetAppVersion()
-        {
-            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
-        }
-
-        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
-        {
-            // Returns True if no problems; otherwise, returns false
-            var lstValidParameters = new List<string> { "D", "Preview", "V", "Trace", "Debug", "DB", "DisableVerify", "NoVerify", "SkipCheckExisting" };
-
-            try
-            {
-                // Make sure no invalid parameters are present
-                if (commandLineParser.InvalidParametersPresent(lstValidParameters))
-                {
-                    var badArguments = new List<string>();
-                    foreach (var item in commandLineParser.InvalidParameters(lstValidParameters))
-                    {
-                        badArguments.Add("/" + item);
-                    }
-
-                    ShowErrorMessage("Invalid command line parameters", badArguments);
-
-                    return false;
-                }
-
-                // Query commandLineParser to see if various parameters are present
-                if (commandLineParser.NonSwitchParameterCount > 0)
-                {
-                    mDataPkgIDList = commandLineParser.RetrieveNonSwitchParameter(0);
-                }
-
-                if (commandLineParser.RetrieveValueForParameter("D", out var strValue))
-                {
-                    if (string.IsNullOrWhiteSpace(strValue))
-                        ShowErrorMessage("/D does not have a date; date threshold will not be used");
-                    else
-                    {
-                        if (DateTime.TryParse(strValue, out var dtThreshold))
-                        {
-                            mDateThreshold = dtThreshold;
-                        }
-                        else
-                        {
-                            ShowErrorMessage("Invalid date specified with /D:" + strValue);
-                        }
-                    }
-
-                }
-
-                if (commandLineParser.IsParameterPresent("Preview"))
-                {
-                    mPreviewMode = true;
-                }
-
-                if (commandLineParser.IsParameterPresent("DisableVerify") ||
-                    commandLineParser.IsParameterPresent("NoVerify"))
-                {
-                    mDisableVerify = true;
-                }
-
-                if (commandLineParser.IsParameterPresent("SkipCheckExisting"))
-                {
-                    mSkipCheckExisting = true;
-                }
-
-                if (commandLineParser.IsParameterPresent("Trace"))
-                {
-                    mTraceMode = true;
-                }
-
-                if (commandLineParser.IsParameterPresent("V"))
-                {
-                    mVerifyOnly = true;
-                }
-
-                if (commandLineParser.IsParameterPresent("Debug"))
-                {
-                    mLogLevel = BaseLogger.LogLevels.DEBUG;
-                    mTraceMode = true;
-                }
-
-                if (commandLineParser.RetrieveValueForParameter("DB", out strValue))
-                {
-                    if (string.IsNullOrWhiteSpace(strValue))
-                        ShowErrorMessage("/DB does not have a value; not overriding the connection string");
-                    else
-                        mDBConnectionString = strValue;
-                }
-
-
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                ShowErrorMessage("Error parsing the command line parameters: " + Environment.NewLine + ex.Message);
-            }
-
-            return false;
-        }
-
         private static void ShowErrorMessage(string message, Exception ex = null)
         {
             ConsoleMsgUtils.ShowError(message, ex);
-        }
-
-        private static void ShowErrorMessage(string message, IReadOnlyCollection<string> additionalInfo)
-        {
-            if (additionalInfo == null || additionalInfo.Count == 0)
-            {
-                ConsoleMsgUtils.ShowError(message);
-                return;
-            }
-
-            var formattedMessage = message + ":";
-
-            foreach (var item in additionalInfo)
-            {
-                formattedMessage += Environment.NewLine + "  " + item;
-            }
-
-            ConsoleMsgUtils.ShowErrorCustom(formattedMessage, true, false);
-        }
-
-        private static void ShowProgramHelp()
-        {
-            var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-            try
-            {
-                Console.WriteLine();
-                Console.WriteLine("This program uploads new/changed data package files to MyEMSL");
-                Console.WriteLine();
-                Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
-
-                Console.WriteLine(
-                    " DataPackageIDList [/D:DateThreshold] [/Preview] [/V] " +
-                    "[/DB:ConnectionString] [/Trace] [/Debug] [/SkipCheckExisting] [/NoVerify]");
-
-                Console.WriteLine();
-                Console.WriteLine("DataPackageIDList can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages");
-                Console.WriteLine("Items in DataPackageIDList can be ID ranges, for example 880-885 or even 892-");
-                Console.WriteLine();
-                Console.WriteLine("Use /D to specify a date threshold for finding modified data packages; if a data package does not have any files modified on/after the /D date, then the data package will not be uploaded to MyEMSL");
-                Console.WriteLine();
-                Console.WriteLine("Use /Preview to preview any files that would be uploaded");
-                Console.WriteLine("");
-                Console.WriteLine("Use /V to verify recently uploaded data packages and skip looking for new/changed files");
-                Console.WriteLine("Use /DB to override the default connection string of " + DataPackageArchiver.CONNECTION_STRING);
-                Console.WriteLine();
-                Console.WriteLine("Use /SkipCheckExisting to skip the check for data package files that are known to exist in MyEMSL and should be visible by a metadata query; if this switch is used, you risk pushing duplicate data files into MyEMSL");
-                Console.WriteLine();
-                Console.WriteLine("Use /NoVerify to skip verifying the upload status of data previously uploaded to MyEMSL but not yet verified");
-                Console.WriteLine();
-                Console.WriteLine("Use /Trace to show additional log messages");
-                Console.WriteLine("Use /Debug to enable the display (and logging) of debug messages; auto-enables /Trace");
-                Console.WriteLine();
-                Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013");
-                Console.WriteLine("Version: " + GetAppVersion());
-                Console.WriteLine();
-
-                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov");
-                Console.WriteLine("Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov");
-                Console.WriteLine();
-
-                // Delay for 1500 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
-                Thread.Sleep(1500);
-
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error displaying the program syntax: " + ex.Message);
-            }
-
         }
 
         #region "Event Handlers"
