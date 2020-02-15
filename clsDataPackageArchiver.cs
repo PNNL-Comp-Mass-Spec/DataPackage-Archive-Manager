@@ -1113,15 +1113,15 @@ namespace DataPackage_Archive_Manager
                 // Setup for execution of the stored procedure
                 var cmd = mDBTools.CreateCommand(SP_NAME_STORE_MYEMSL_STATS, CommandType.StoredProcedure);
 
-                mDBTools.AddParameter(cmd, "@Return", SqlType.Int, direction: ParameterDirection.ReturnValue);
-                mDBTools.AddParameter(cmd, "@DataPackageID", SqlType.Int, value: Convert.ToInt32(dataPkgInfo.ID));
+                mDBTools.AddParameter(cmd, "@Return", SqlType.Int, ParameterDirection.ReturnValue);
+                mDBTools.AddParameter(cmd, "@DataPackageID", SqlType.Int).Value = Convert.ToInt32(dataPkgInfo.ID);
                 mDBTools.AddParameter(cmd, "@Subfolder", SqlType.VarChar, 128, uploadInfo.SubDir);
-                mDBTools.AddParameter(cmd, "@FileCountNew", SqlType.Int, value: uploadInfo.FileCountNew);
-                mDBTools.AddParameter(cmd, "@FileCountUpdated", SqlType.Int, value: uploadInfo.FileCountUpdated);
-                mDBTools.AddParameter(cmd, "@Bytes", SqlType.BigInt, value: uploadInfo.Bytes);
-                mDBTools.AddParameter(cmd, "@UploadTimeSeconds", SqlType.Real, value: (float)uploadInfo.UploadTimeSeconds);
+                mDBTools.AddParameter(cmd, "@FileCountNew", SqlType.Int).Value = uploadInfo.FileCountNew;
+                mDBTools.AddParameter(cmd, "@FileCountUpdated", SqlType.Int).Value = uploadInfo.FileCountUpdated;
+                mDBTools.AddParameter(cmd, "@Bytes", SqlType.BigInt).Value = uploadInfo.Bytes;
+                mDBTools.AddParameter(cmd, "@UploadTimeSeconds", SqlType.Real).Value = (float)uploadInfo.UploadTimeSeconds;
                 mDBTools.AddParameter(cmd, "@StatusURI", SqlType.VarChar, 255, uploadInfo.StatusURI);
-                mDBTools.AddParameter(cmd, "@ErrorCode", SqlType.Int, value: uploadInfo.ErrorCode);
+                mDBTools.AddParameter(cmd, "@ErrorCode", SqlType.Int).Value = uploadInfo.ErrorCode;
 
                 ReportMessage("Calling " + SP_NAME_STORE_MYEMSL_STATS + " for Data Package " + dataPkgInfo.ID, BaseLogger.LogLevels.DEBUG);
 
@@ -1159,12 +1159,12 @@ namespace DataPackage_Archive_Manager
             {
                 var cmd = mDBTools.CreateCommand(SP_NAME_SET_MYEMSL_UPLOAD_STATUS, CommandType.StoredProcedure);
 
-                mDBTools.AddParameter(cmd, "@Return", SqlType.Int, direction: ParameterDirection.ReturnValue);
+                mDBTools.AddParameter(cmd, "@Return", SqlType.Int, ParameterDirection.ReturnValue);
                 mDBTools.AddTypedParameter(cmd, "@EntryID", SqlType.Int, value: statusInfo.EntryID);
                 mDBTools.AddTypedParameter(cmd, "@DataPackageID", SqlType.Int, value: statusInfo.DataPackageID);
                 mDBTools.AddTypedParameter(cmd, "@Available", SqlType.TinyInt, value: BoolToTinyInt(true));
                 mDBTools.AddTypedParameter(cmd, "@Verified", SqlType.TinyInt, value: BoolToTinyInt(verified));
-                mDBTools.AddParameter(cmd, "@message", SqlType.VarChar, 512, direction: ParameterDirection.Output);
+                mDBTools.AddParameter(cmd, "@message", SqlType.VarChar, 512, ParameterDirection.Output);
 
                 if (PreviewMode)
                 {
