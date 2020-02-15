@@ -1065,11 +1065,6 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        private void ReportError(string message, Exception ex)
-        {
-            ReportError(message, false, ex);
-        }
-
         private void ReportError(string message, bool logToDB = false, Exception ex = null)
         {
             OnErrorEvent(message, ex);
