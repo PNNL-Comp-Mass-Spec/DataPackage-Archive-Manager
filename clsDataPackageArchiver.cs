@@ -474,7 +474,7 @@ namespace DataPackage_Archive_Manager
                 {
                     EntryID = row[0].CastDBVal<int>(),
                     DataPackageID = row[1].CastDBVal<int>(),
-                    Entered = row[2].CastDBVal<DateTime>(DateTime.Now)
+                    Entered = row[2].CastDBVal(DateTime.Now)
                 };
 
                 var statusNum = row[3].CastDBVal<int>();
@@ -486,7 +486,7 @@ namespace DataPackage_Archive_Manager
                     continue;
                 }
 
-                var statusURI = row[4].CastDBVal<string>("");
+                var statusURI = row[4].CastDBVal(string.Empty);
                 if (!string.IsNullOrWhiteSpace(statusURI))
                 {
                     statusInfo.StatusURI = statusURI;
@@ -567,7 +567,7 @@ namespace DataPackage_Archive_Manager
                     EUSProposalID = row["EUS_Proposal_ID"].CastDBVal<string>(),
                     EUSInstrumentID = row["EUS_Instrument_ID"].CastDBVal<int>(),
                     InstrumentName = row["Instrument"].CastDBVal<string>(),
-                    Created =row["Created"].CastDBVal<DateTime>(DateTime.Now),
+                    Created = row["Created"].CastDBVal(DateTime.Now),
                     FolderName = row["Package_File_Folder"].CastDBVal<string>(),
                     SharePath = row["Share_Path"].CastDBVal<string>(),
                     LocalPath = row["Local_Path"].CastDBVal<string>(),
