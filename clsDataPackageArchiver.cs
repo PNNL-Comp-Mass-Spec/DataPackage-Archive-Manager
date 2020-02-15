@@ -463,7 +463,10 @@ namespace DataPackage_Archive_Manager
                 "       Entered >= '{0:yyyy-MM-dd}'",
                 dateThreshold);
 
-            var success = mDBTools.GetQueryResultsDataTable(sql, out var table, retryCount: (short) retryCount);
+            var success = mDBTools.GetQueryResultsDataTable(sql, out var table, retryCount);
+
+            if (!success)
+                OnWarningEvent("GetQueryResultsDataTable reported false querying V_MyEMSL_Uploads");
 
             foreach (DataRow row in table.Rows)
             {
@@ -548,6 +551,9 @@ namespace DataPackage_Archive_Manager
             sql.Append(" ORDER BY ID");
 
             var success = mDBTools.GetQueryResultsDataTable(sql.ToString(), out var table, retryCount: 1);
+
+            if (!success)
+                OnWarningEvent("GetQueryResultsDataTable reported false querying V_Data_Package_Export");
 
             foreach (DataRow row in table.Rows)
             {
