@@ -948,12 +948,12 @@ namespace DataPackage_Archive_Manager
 
                     if (string.IsNullOrWhiteSpace(dataPkgInfo.EUSProposalID))
                     {
-                        OnWarningEvent("Data package does not have an associated EUS Proposal; using " + Upload.DEFAULT_EUS_PROPOSAL_ID);
-                        uploadMetadata.EUSProposalID = Upload.DEFAULT_EUS_PROPOSAL_ID;
+                        OnWarningEvent("Data package does not have an associated EUS Proposal; using " + Upload.DEFAULT_EUS_PROJECT_ID);
+                        uploadMetadata.EUSProjectID = Upload.DEFAULT_EUS_PROJECT_ID;
                     }
                     else
                     {
-                        uploadMetadata.EUSProposalID = dataPkgInfo.EUSProposalID;
+                        uploadMetadata.EUSProjectID = dataPkgInfo.EUSProposalID;
                     }
 
                     if (dataPkgInfo.EUSInstrumentID <= 0)
