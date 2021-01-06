@@ -4,19 +4,67 @@ namespace DataPackage_Archive_Manager
 {
     internal class DataPackageInfo
     {
-        public int ID { get; }			            // Data Package ID
-        public string Name { get; set; }            // Data Package Name
-        public string OwnerPRN { get; set; }        // Data Package Owner's username
-        public int OwnerEUSID { get; set; }         // EUS ID of the data package owner
-        public string EUSProposalID { get; set; }   // EUS Proposal ID (most common one in use by the datasets or jobs associated with the data package)
-        public int EUSInstrumentID { get; set; }    // EUS Instrument ID (most common one in use by the datasets or jobs associated with the data package)
-        public string InstrumentName { get; set; }  // Instrument Name (most common one in use by the datasets or jobs associated with the data package)
         // Ignore Spelling: DataPkgs
+
+        /// <summary>
+        /// Data Package ID
+        /// </summary>
+        public int ID { get; }
+
+        /// <summary>
+        /// Data Package Name
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Data Package Owner's username
+        /// </summary>
+        public string OwnerPRN { get; set; }
+
+        /// <summary>
+        /// EUS ID of the data package owner
+        /// </summary>
+        public int OwnerEUSID { get; set; }
+
+        /// <summary>
+        /// EUS Proposal ID (most common one in use by the datasets or jobs associated with the data package)
+        /// </summary>
+        public string EUSProposalID { get; set; }
+
+        /// <summary>
+        /// EUS Instrument ID (most common one in use by the datasets or jobs associated with the data package)
+        /// </summary>
+        public int EUSInstrumentID { get; set; }
+
+        /// <summary>
+        /// Instrument Name (most common one in use by the datasets or jobs associated with the data package)
+        /// </summary>
+        public string InstrumentName { get; set; }
+
+        /// <summary>
+        /// Time that the data package info was created
+        /// </summary>
         public DateTime Created { get; set; }
-        public string FolderName { get; set; }		// Example: 894_CPTAC_Batch4_Global_CompRef
-        public string SharePath { get; set; }		// Example: \\protoapps\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
-        public string LocalPath { get; set; }		// Example: F:\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
-        public int MyEMSLUploads { get; set; }		// Number of successful uploads for this data package
+
+        /// <summary>
+        /// Example: 894_CPTAC_Batch4_Global_CompRef
+        /// </summary>
+        public string FolderName { get; set; }
+
+        /// <summary>
+        /// Example: \\protoapps\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
+        /// </summary>
+        public string SharePath { get; set; }
+
+        /// <summary>
+        /// Example: F:\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
+        /// </summary>
+        public string LocalPath { get; set; }
+
+        /// <summary>
+        /// Number of successful uploads for this data package
+        /// </summary>
+        public int MyEMSLUploads { get; set; }
 
         /// <summary>
         /// Constructor

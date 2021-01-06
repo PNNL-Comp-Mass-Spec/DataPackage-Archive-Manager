@@ -38,9 +38,13 @@ namespace DataPackage_Archive_Manager
         /// Maximum number of files to archive
         /// </summary>
         /// <remarks>
-        /// Since data package uploads always work with the entire data package folder and all subfolders,
-        ///   there is a maximum cap on the number of files that will be stored in MyEMSL for a given data package
+        /// <para>
+        /// Since data package uploads always work with the entire data package folder and all subdirectories,
+        /// there is a maximum cap on the number of files that will be stored in MyEMSL for a given data package
+        /// </para>
+        /// <para>
         /// If a data package has more than 600 files, the data needs to be manually zipped before this manager will auto-push into MyEMSL
+        /// </para>
         /// </remarks>
         private const int MAX_FILES_TO_ARCHIVE = 600;
 
