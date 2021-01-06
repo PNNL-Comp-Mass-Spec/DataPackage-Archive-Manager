@@ -11,6 +11,7 @@ namespace DataPackage_Archive_Manager
         public string EUSProposalID { get; set; }   // EUS Proposal ID (most common one in use by the datasets or jobs associated with the data package)
         public int EUSInstrumentID { get; set; }    // EUS Instrument ID (most common one in use by the datasets or jobs associated with the data package)
         public string InstrumentName { get; set; }  // Instrument Name (most common one in use by the datasets or jobs associated with the data package)
+        // Ignore Spelling: DataPkgs
         public DateTime Created { get; set; }
         public string FolderName { get; set; }		// Example: 894_CPTAC_Batch4_Global_CompRef
         public string SharePath { get; set; }		// Example: \\protoapps\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
