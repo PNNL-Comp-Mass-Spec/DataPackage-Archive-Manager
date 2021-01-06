@@ -270,9 +270,7 @@ namespace DataPackage_Archive_Manager
 
                 if (keep)
                     lstDataPackageFiles.Add(dataPkgFile);
-
             }
-
 
             if (lstDataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
             {
@@ -374,7 +372,6 @@ namespace DataPackage_Archive_Manager
             FileInfo fiLocalFile,
             ICollection<DatasetDirectoryOrFileInfo> archiveFiles)
         {
-
             if (archiveFiles.Count == 0)
             {
                 // File not found; add to lstDatasetFilesToArchive
@@ -516,7 +513,6 @@ namespace DataPackage_Archive_Manager
             // Make initial log entry
             var msg = "=== Started Data Package Archiver V" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " ===== ";
             LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.INFO, msg);
-
         }
 
         private List<DataPackageInfo> LookupDataPkgInfo(IReadOnlyList<KeyValuePair<int, int>> lstDataPkgIDs)
@@ -551,7 +547,6 @@ namespace DataPackage_Archive_Manager
                         sql.AppendFormat("ID BETWEEN {0} AND {1}", lstDataPkgIDs[i].Key, lstDataPkgIDs[i].Value);
                     }
                 }
-
             }
 
             sql.Append(" ORDER BY ID");
@@ -596,7 +591,6 @@ namespace DataPackage_Archive_Manager
         /// In that case, the KeyValuePair will be (300,-1)</remarks>
         public List<KeyValuePair<int, int>> ParseDataPkgIDList(string dataPkgIDList)
         {
-
             var lstValues = dataPkgIDList.Split(',').ToList();
             var lstDataPkgIDs = new List<KeyValuePair<int, int>>();
 
@@ -652,7 +646,6 @@ namespace DataPackage_Archive_Manager
             }
 
             return lstDataPkgIDs;
-
         }
 
         /// <summary>
@@ -663,7 +656,6 @@ namespace DataPackage_Archive_Manager
         /// <returns></returns>
         public bool ProcessDataPackages(List<KeyValuePair<int, int>> lstDataPkgIDs, DateTime dateThreshold)
         {
-
             List<DataPackageInfo> lstDataPkgInfo;
             var successCount = 0;
 
@@ -764,7 +756,6 @@ namespace DataPackage_Archive_Manager
                         }
 
                         dtLastSimpleSearchVerify = DateTime.UtcNow;
-
                     }
 
                     // Pre-populate lstDataPackageInfoCache with the files for the current group
@@ -780,10 +771,8 @@ namespace DataPackage_Archive_Manager
 
                         if (success)
                             successCount++;
-
                     }
                 }
-
             }
             catch (Exception ex)
             {
@@ -1000,7 +989,6 @@ namespace DataPackage_Archive_Manager
 
                     if (success)
                     {
-
                         var msg = "Upload of changed files for Data Package " + dataPkgInfo.ID + " completed in " + tsElapsedTime.TotalSeconds.ToString("0.0") + " seconds: " + uploadInfo.FileCountNew + " new files, " + uploadInfo.FileCountUpdated + " updated files, " + uploadInfo.Bytes + " bytes";
                         ReportMessage(msg);
 
@@ -1018,7 +1006,6 @@ namespace DataPackage_Archive_Manager
 
                     // Post the StatusURI info to the database
                     StoreMyEMSLUploadStats(dataPkgInfo, uploadInfo);
-
                 }
                 return success;
             }
@@ -1039,7 +1026,6 @@ namespace DataPackage_Archive_Manager
 
                 return false;
             }
-
         }
 
         private void ReportMessage(
@@ -1047,7 +1033,6 @@ namespace DataPackage_Archive_Manager
             BaseLogger.LogLevels logLevel = BaseLogger.LogLevels.INFO,
             bool logToDB = false)
         {
-
             if (logToDB)
                 LogTools.WriteLog(LogTools.LoggerTypes.LogDb, logLevel, message.Trim());
             else
@@ -1068,7 +1053,6 @@ namespace DataPackage_Archive_Manager
                     OnStatusEvent(message);
                     break;
             }
-
         }
 
         private void ReportError(string message, bool logToDB = false, Exception ex = null)
@@ -1092,7 +1076,6 @@ namespace DataPackage_Archive_Manager
         /// <returns></returns>
         public bool StartProcessing(List<KeyValuePair<int, int>> lstDataPkgIDs, DateTime dateThreshold, bool previewMode)
         {
-
             PreviewMode = previewMode;
 
             // Upload new data
@@ -1138,14 +1121,12 @@ namespace DataPackage_Archive_Manager
                 var msg = "Error " + resCode + " storing MyEMSL Upload Stats";
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg);
                 return false;
-
             }
             catch (Exception ex)
             {
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, "Exception storing the MyEMSL upload stats: " + ex.Message);
                 return false;
             }
-
         }
 
         /// <summary>
@@ -1199,7 +1180,6 @@ namespace DataPackage_Archive_Manager
         /// <returns></returns>
         public bool VerifyKnownMyEMSLSearchResults()
         {
-
             if (SkipCheckExisting)
             {
                 OnWarningEvent("Skipping check for known data package files");
@@ -1307,7 +1287,6 @@ namespace DataPackage_Archive_Manager
         /// <returns>True if successful, false if an error</returns>
         public bool VerifyUploadStatus()
         {
-
             // First obtain a list of status URIs to check
             // Keys are StatusNum integers, values are StatusURI strings
             const int retryCount = 2;
@@ -1321,7 +1300,6 @@ namespace DataPackage_Archive_Manager
 
             try
             {
-
                 // Confirm that the data packages are visible in MyEMSL Metadata
                 // To avoid obtaining too many results from MyEMSL, process the data packages in dctURIs in groups, 5 at a time
                 // First construct a unique list of the Data Package IDs in dctURIs
@@ -1360,7 +1338,6 @@ namespace DataPackage_Archive_Manager
                         {
                             dctURIsInGroup.Add(uriItem.Key, uriItem.Value);
                         }
-
                     }
 
                     // Pre-populate lstDataPackageInfoCache with the files for the current group
@@ -1384,7 +1361,6 @@ namespace DataPackage_Archive_Manager
                 ReportError("Exception verifying data package upload status (VerifyUploadStatus): " + ex.Message, true);
                 return false;
             }
-
         }
 
         private UploadStatus VerifyUploadStatusWork(
@@ -1434,7 +1410,6 @@ namespace DataPackage_Archive_Manager
 
                         return UploadStatus.VerificationError;
                     }
-
                 }
                 else
                 {
@@ -1518,7 +1493,6 @@ namespace DataPackage_Archive_Manager
 
                 // Update values in the DB
                 UpdateMyEMSLUploadStatus(statusInfo.Value, verified: true);
-
             }
             catch (Exception ex)
             {
@@ -1551,7 +1525,6 @@ namespace DataPackage_Archive_Manager
                 mLastStatusUpdate = DateTime.UtcNow;
                 ReportMessage(e.StatusMessage, BaseLogger.LogLevels.DEBUG);
             }
-
         }
 
         private void MyEMSLUpload_UploadCompleted(object sender, UploadCompletedEventArgs e)

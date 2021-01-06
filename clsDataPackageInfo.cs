@@ -32,7 +32,6 @@ namespace DataPackage_Archive_Manager
             FolderName = string.Empty;
             SharePath = string.Empty;
             LocalPath = string.Empty;
-
         }
 
         public override string ToString()
