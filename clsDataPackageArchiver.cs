@@ -1366,9 +1366,11 @@ namespace DataPackage_Archive_Manager
                     // Pre-populate lstDataPackageInfoCache with the files for the current group
                     dataPackageInfoCache.RefreshInfo();
 
+                    var exceptionCount = 0;
+
                     foreach (var statusInfo in dctURIsInGroup)
                     {
-                        var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache);
+                        var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache, ref exceptionCount);
 
                         if (eResult == UploadStatus.CriticalError)
                             return false;
@@ -1388,14 +1390,12 @@ namespace DataPackage_Archive_Manager
         private UploadStatus VerifyUploadStatusWork(
             MyEMSLStatusCheck statusChecker,
             KeyValuePair<int, MyEMSLStatusInfo> statusInfo,
-            DataPackageListInfo dataPackageInfoCache)
+            DataPackageListInfo dataPackageInfoCache,
+            ref int exceptionCount)
         {
-            var exceptionCount = 0;
-
             try
             {
                 // Obtain the Status XML
-
                 var serverResponse = statusChecker.GetIngestStatus(
                     statusInfo.Value.StatusURI,
                     out _,
@@ -1522,22 +1522,21 @@ namespace DataPackage_Archive_Manager
             }
             catch (Exception ex)
             {
+                var errorMessage = string.Format(
+                        "Exception verifying archive status for Data package {0}, Entry_ID {1}: {2}",
+                        statusInfo.Value.DataPackageID, statusInfo.Value.EntryID, ex.Message);
+
                 exceptionCount++;
                 if (exceptionCount < 3)
                 {
-                    ReportMessage(
-                        "Exception verifying archive status for Data package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
-                        statusInfo.Value.EntryID + ": " + ex.Message, BaseLogger.LogLevels.WARN);
-                }
-                else
-                {
-                    ReportError(
-                        "Exception verifying archive status for for Data Package " + statusInfo.Value.DataPackageID + ", Entry_ID " +
-                        statusInfo.Value.EntryID + ": " + ex.Message, true);
-
-                    // Too many errors for this data package; move on to the next one
+                    ReportMessage(errorMessage, BaseLogger.LogLevels.WARN);
                     return UploadStatus.VerificationError;
                 }
+
+                ReportError(errorMessage, true);
+
+                // Too many errors for this data package; move on to the next one
+                return UploadStatus.CriticalError;
             }
 
             return UploadStatus.Success;
