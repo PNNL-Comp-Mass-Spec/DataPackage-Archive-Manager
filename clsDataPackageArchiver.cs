@@ -16,7 +16,7 @@ using Utilities = Pacifica.Core.Utilities;
 
 namespace DataPackage_Archive_Manager
 {
-    class DataPackageArchiver : EventNotifier
+    internal class DataPackageArchiver : EventNotifier
     {
         #region "Constants"
 
@@ -140,8 +140,8 @@ namespace DataPackage_Archive_Manager
             RegisterEvents(mMyEMSLUploader);
 
             // Attach the events
-            mMyEMSLUploader.StatusUpdate += myEMSLUpload_StatusUpdate;
-            mMyEMSLUploader.UploadCompleted += myEMSLUpload_UploadCompleted;
+            mMyEMSLUploader.StatusUpdate += MyEMSLUpload_StatusUpdate;
+            mMyEMSLUploader.UploadCompleted += MyEMSLUpload_UploadCompleted;
 
             Initialize();
         }
@@ -250,7 +250,7 @@ namespace DataPackage_Archive_Manager
                 {
                     keep = false;
                 }
-                else if (dataPkgFile.Name.ToLower().EndsWith(".mzml.gz"))
+                else if (dataPkgFile.Name.EndsWith(".mzml.gz", StringComparison.OrdinalIgnoreCase))
                 {
                     keep = false;
                 }
@@ -539,11 +539,17 @@ namespace DataPackage_Archive_Manager
                         sql.Append(" OR ");
 
                     if (lstDataPkgIDs[i].Key == lstDataPkgIDs[i].Value)
-                        sql.Append("ID = " + lstDataPkgIDs[i].Key);
+                    {
+                        sql.AppendFormat("ID = {0}", lstDataPkgIDs[i].Key);
+                    }
                     else if (lstDataPkgIDs[i].Value < 0)
-                        sql.Append("ID >= " + lstDataPkgIDs[i].Key);
+                    {
+                        sql.AppendFormat("ID >= {0}", lstDataPkgIDs[i].Key);
+                    }
                     else
-                        sql.Append("ID BETWEEN " + lstDataPkgIDs[i].Key + " AND " + lstDataPkgIDs[i].Value);
+                    {
+                        sql.AppendFormat("ID BETWEEN {0} AND {1}", lstDataPkgIDs[i].Key, lstDataPkgIDs[i].Value);
+                    }
                 }
 
             }
@@ -773,7 +779,7 @@ namespace DataPackage_Archive_Manager
                         var success = ProcessOneDataPackage(dataPkgInfo, dateThreshold, dataPackageInfoCache);
 
                         if (success)
-                            successCount += 1;
+                            successCount++;
 
                     }
                 }
@@ -1257,7 +1263,7 @@ namespace DataPackage_Archive_Manager
                         dataPkgMissingFiles.Add(dataPkg.Key, missingFiles);
                 }
 
-                if (dataPkgMissingFiles.Count <= 0)
+                if (dataPkgMissingFiles.Count == 0)
                 {
                     return true;
                 }
@@ -1298,7 +1304,7 @@ namespace DataPackage_Archive_Manager
         /// Verify each one, updating the database as appropriate (if PreviewMode=false)
         /// Post an error to the DB if data has not been ingested within 24 hours or verified within 48 hours (and PreviewMode=false)
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True if successful, false if an error</returns>
         public bool VerifyUploadStatus()
         {
 
@@ -1348,11 +1354,12 @@ namespace DataPackage_Archive_Manager
                         dataPackageInfoCache.AddDataPackage(currentDataPackageID);
 
                         // Find all of the URIs for this data package
-                        foreach (
-                            var uriItem in
-                                (from item in dctURIs where item.Value.DataPackageID == currentDataPackageID select item)
-                            )
+                        var query = from item in dctURIs where item.Value.DataPackageID == currentDataPackageID select item;
+
+                        foreach (var uriItem in query)
+                        {
                             dctURIsInGroup.Add(uriItem.Key, uriItem.Value);
+                        }
 
                     }
 
@@ -1538,7 +1545,7 @@ namespace DataPackage_Archive_Manager
 
         #region "Event Handlers"
 
-        void myEMSLUpload_StatusUpdate(object sender, StatusEventArgs e)
+        private void MyEMSLUpload_StatusUpdate(object sender, StatusEventArgs e)
         {
             if (DateTime.UtcNow.Subtract(mLastStatusUpdate).TotalSeconds >= 5)
             {
@@ -1548,7 +1555,7 @@ namespace DataPackage_Archive_Manager
 
         }
 
-        void myEMSLUpload_UploadCompleted(object sender, UploadCompletedEventArgs e)
+        private void MyEMSLUpload_UploadCompleted(object sender, UploadCompletedEventArgs e)
         {
             var msg = "Upload complete";
 

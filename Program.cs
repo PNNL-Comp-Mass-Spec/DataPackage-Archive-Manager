@@ -91,8 +91,10 @@ namespace DataPackage_Archive_Manager
                 {
                     List<KeyValuePair<int, int>> lstDataPkgIDs;
                     if (options.PackageIds.StartsWith("*"))
+                    {
                         // Process all Data Packages by passing an empty list to ParseDataPkgIDList
                         lstDataPkgIDs = new List<KeyValuePair<int, int>>();
+                    }
                     else
                     {
                         // Parse the data package ID list

@@ -2,7 +2,7 @@
 
 namespace DataPackage_Archive_Manager
 {
-    class DataPackageInfo
+    internal class DataPackageInfo
     {
         public int ID { get; }			            // Data Package ID
         public string Name { get; set; }            // Data Package Name
