@@ -153,21 +153,21 @@ namespace DataPackage_Archive_Manager
 
         private int CountFilesForDataPackage(DataPackageInfo dataPkgInfo)
         {
-            var diDataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
-            if (!diDataPkg.Exists)
-                diDataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
+            var dataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
+            if (!dataPkg.Exists)
+                dataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
 
-            return !diDataPkg.Exists ? 0 : diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
+            return !dataPkg.Exists ? 0 : dataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
         }
 
         private List<FileInfoObject> FindDataPackageFilesToArchive(
             DataPackageInfo dataPkgInfo,
-            DirectoryInfo diDataPkg,
+            DirectoryInfo dataPkg,
             DateTime dateThreshold,
             DataPackageListInfo dataPackageInfoCache,
             out MyEMSLUploadInfo uploadInfo)
         {
-            var lstDatasetFilesToArchive = new List<FileInfoObject>();
+            var datasetFilesToArchive = new List<FileInfoObject>();
 
             uploadInfo = new MyEMSLUploadInfo();
             uploadInfo.Clear();
@@ -175,9 +175,9 @@ namespace DataPackage_Archive_Manager
             uploadInfo.SubDir = dataPkgInfo.FolderName;
 
             // Construct a list of the files on disk for this data package
-            var lstDataPackageFilesAll = diDataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList();
+            var dataPackageFilesAll = dataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList();
 
-            if (lstDataPackageFilesAll.Count == 0)
+            if (dataPackageFilesAll.Count == 0)
             {
                 // Nothing to archive; this is not an error
                 ReportMessage("Data Package " + dataPkgInfo.ID + " does not have any files; nothing to archive", BaseLogger.LogLevels.DEBUG);
@@ -187,14 +187,14 @@ namespace DataPackage_Archive_Manager
             // Look for any Auto-process folders that have recently modified files
             // These folders will be skipped until the files are at least 4 hours old
             // This list contains folder paths to skip
-            var lstDataPackageFoldersToSkip = new List<string>();
+            var dataPackageFoldersToSkip = new List<string>();
 
-            var lstDataPackageFolders = diDataPkg.GetDirectories("*", SearchOption.AllDirectories).ToList();
-            var reAutoJobFolder = new Regex(@"^[A-Z].{1,5}\d{12,12}_Auto\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var dataPackageFolders = dataPkg.GetDirectories("*", SearchOption.AllDirectories).ToList();
+            var autoJobFolderMatcher = new Regex(@"^[A-Z].{1,5}\d{12,12}_Auto\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-            foreach (var dataPkgFolder in lstDataPackageFolders)
+            foreach (var dataPkgFolder in dataPackageFolders)
             {
-                if (!reAutoJobFolder.IsMatch(dataPkgFolder.Name))
+                if (!autoJobFolderMatcher.IsMatch(dataPkgFolder.Name))
                 {
                     continue;
                 }
@@ -210,11 +210,11 @@ namespace DataPackage_Archive_Manager
                 }
 
                 if (skipFolder)
-                    lstDataPackageFoldersToSkip.Add(dataPkgFolder.FullName);
+                    dataPackageFoldersToSkip.Add(dataPkgFolder.FullName);
             }
 
             // Filter out files that we do not want to archive
-            var lstFilesToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase)
+            var filesToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase)
             {
                 "Thumbs.db",
                 ".DS_Store",
@@ -222,22 +222,22 @@ namespace DataPackage_Archive_Manager
             };
 
             // Also filter out Thermo .raw files, mzML files, etc.
-            var lstExtensionsToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase)
+            var extensionsToSkip = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase)
             {
                 ".raw",
                 ".mzXML",
                 ".mzML"
             };
 
-            var lstDataPackageFiles = new List<FileInfo>();
-            foreach (var dataPkgFile in lstDataPackageFilesAll)
+            var dataPackageFiles = new List<FileInfo>();
+            foreach (var dataPkgFile in dataPackageFilesAll)
             {
                 var keep = true;
-                if (lstFilesToSkip.Contains(dataPkgFile.Name))
+                if (filesToSkip.Contains(dataPkgFile.Name))
                 {
                     keep = false;
                 }
-                else if (lstExtensionsToSkip.Contains(dataPkgFile.Extension))
+                else if (extensionsToSkip.Contains(dataPkgFile.Extension))
                 {
                     keep = false;
                 }
@@ -255,12 +255,12 @@ namespace DataPackage_Archive_Manager
                     keep = false;
                 }
 
-                var diDataPkgFileContainer = dataPkgFile.Directory;
-                if (keep && diDataPkgFileContainer != null)
+                var dataPkgFileContainer = dataPkgFile.Directory;
+                if (keep && dataPkgFileContainer != null)
                 {
-                    foreach (var dataPkgFolder in lstDataPackageFoldersToSkip)
+                    foreach (var dataPkgFolder in dataPackageFoldersToSkip)
                     {
-                        if (diDataPkgFileContainer.FullName.StartsWith(dataPkgFolder))
+                        if (dataPkgFileContainer.FullName.StartsWith(dataPkgFolder))
                         {
                             keep = false;
                             break;
@@ -269,83 +269,85 @@ namespace DataPackage_Archive_Manager
                 }
 
                 if (keep)
-                    lstDataPackageFiles.Add(dataPkgFile);
+                {
+                    dataPackageFiles.Add(dataPkgFile);
+                }
             }
 
-            if (lstDataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
+            if (dataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
             {
-                ReportError(" Data Package " + dataPkgInfo.ID + " has " + lstDataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count; see " + dataPkgInfo.SharePath, true);
+                ReportError(" Data Package " + dataPkgInfo.ID + " has " + dataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count; see " + dataPkgInfo.SharePath, true);
                 return new List<FileInfoObject>();
             }
 
-            if (lstDataPackageFiles.Count == 0)
+            if (dataPackageFiles.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                var msg = " Data Package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all have been skipped";
+                var msg = " Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all have been skipped";
 
-                if (lstDataPackageFoldersToSkip.Count > 0)
+                if (dataPackageFoldersToSkip.Count > 0)
                     msg += " due to recently modified files in auto-job result folders";
                 else
                     msg += " since they are system or temporary files";
 
                 ReportMessage(msg + "; nothing to archive");
-                ReportMessage("  Data Package " + dataPkgInfo.ID + " path: " + diDataPkg.FullName, BaseLogger.LogLevels.DEBUG);
+                ReportMessage("  Data Package " + dataPkgInfo.ID + " path: " + dataPkg.FullName, BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
             // Make sure at least one of the files was modified after the date threshold
-            var passesDateThreshold = lstDataPackageFiles.Any(fiLocalFile => fiLocalFile.LastWriteTime >= dateThreshold);
+            var passesDateThreshold = dataPackageFiles.Any(localFile => localFile.LastWriteTime >= dateThreshold);
 
             if (!passesDateThreshold)
             {
                 // None of the modified files passes the date threshold
                 string msg;
 
-                if (lstDataPackageFilesAll.Count == 1)
+                if (dataPackageFilesAll.Count == 1)
                     msg = " Data Package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
                 else
-                    msg = " Data Package " + dataPkgInfo.ID + " has " + lstDataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
+                    msg = " Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
 
                 ReportMessage(msg + "; nothing to archive", BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
-            // Note: subtracting 60 seconds from UtcNow when initializing dtLastProgress so that a progress message will appear as an "INFO" level log message if 5 seconds elapses
+            // Note: subtracting 60 seconds from UtcNow when initializing lastProgress so that a progress message will appear as an "INFO" level log message if 5 seconds elapses
             // After that, the INFO level messages will appear every 30 seconds
-            var dtLastProgress = DateTime.UtcNow.AddSeconds(-60);
-            var dtLastProgressDetail = DateTime.UtcNow;
+            var lastProgress = DateTime.UtcNow.AddSeconds(-60);
+            var lastProgressDetail = DateTime.UtcNow;
 
             var filesProcessed = 0;
 
-            foreach (var fiLocalFile in lstDataPackageFiles)
+            foreach (var localFile in dataPackageFiles)
             {
                 // Note: when storing data package files in MyEMSL the SubDir path will always start with the data package folder name
                 var subDir = string.Copy(uploadInfo.SubDir);
 
-                if (fiLocalFile.Directory != null && fiLocalFile.Directory.FullName.Length > diDataPkg.FullName.Length)
+                if (localFile.Directory != null && localFile.Directory.FullName.Length > dataPkg.FullName.Length)
                 {
                     // Append the subdirectory path
-                    subDir = Path.Combine(subDir, fiLocalFile.Directory.FullName.Substring(diDataPkg.FullName.Length + 1));
+                    subDir = Path.Combine(subDir, localFile.Directory.FullName.Substring(dataPkg.FullName.Length + 1));
                 }
 
                 // Look for this file in MyEMSL
-                var archiveFiles = dataPackageInfoCache.FindFiles(fiLocalFile.Name, subDir, dataPkgInfo.ID, recurse: false);
+                var archiveFiles = dataPackageInfoCache.FindFiles(localFile.Name, subDir, dataPkgInfo.ID, recurse: false);
 
-                if (diDataPkg.Parent == null)
-                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+                if (dataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
-                // Possibly add the file to lstDatasetFilesToArchive
-                AddFileIfArchiveRequired(diDataPkg, ref uploadInfo, lstDatasetFilesToArchive, fiLocalFile, archiveFiles);
+                // Possibly add the file to datasetFilesToArchive
+                AddFileIfArchiveRequired(dataPkg, ref uploadInfo, datasetFilesToArchive, localFile, archiveFiles);
 
                 filesProcessed++;
-                if (DateTime.UtcNow.Subtract(dtLastProgressDetail).TotalSeconds >= 5)
+                if (DateTime.UtcNow.Subtract(lastProgressDetail).TotalSeconds >= 5)
                 {
-                    dtLastProgressDetail = DateTime.UtcNow;
+                    lastProgressDetail = DateTime.UtcNow;
 
-                    var progressMessage = "Finding files to archive for Data Package " + dataPkgInfo.ID + ": " + filesProcessed + " / " + lstDataPackageFiles.Count;
-                    if (DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 30)
+                    var progressMessage = "Finding files to archive for Data Package " + dataPkgInfo.ID + ": " + filesProcessed + " / " + dataPackageFiles.Count;
+                    if (DateTime.UtcNow.Subtract(lastProgress).TotalSeconds >= 30)
                     {
-                        dtLastProgress = DateTime.UtcNow;
+                        lastProgress = DateTime.UtcNow;
                         ReportMessage(progressMessage);
                     }
                     else
@@ -355,32 +357,32 @@ namespace DataPackage_Archive_Manager
                 }
             }
 
-            if (lstDatasetFilesToArchive.Count == 0)
+            if (datasetFilesToArchive.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                ReportMessage(" All files for Data Package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + lstDataPackageFiles.Count, BaseLogger.LogLevels.DEBUG);
-                return lstDatasetFilesToArchive;
+                ReportMessage(" All files for Data Package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + dataPackageFiles.Count, BaseLogger.LogLevels.DEBUG);
+                return datasetFilesToArchive;
             }
 
-            return lstDatasetFilesToArchive;
+            return datasetFilesToArchive;
         }
 
         private static void AddFileIfArchiveRequired(
-            DirectoryInfo diDataPkg,
+            DirectoryInfo dataPkg,
             ref MyEMSLUploadInfo uploadInfo,
-            ICollection<FileInfoObject> lstDatasetFilesToArchive,
-            FileInfo fiLocalFile,
+            ICollection<FileInfoObject> datasetFilesToArchive,
+            FileInfo localFile,
             ICollection<DatasetDirectoryOrFileInfo> archiveFiles)
         {
             if (archiveFiles.Count == 0)
             {
-                // File not found; add to lstDatasetFilesToArchive
-                if (diDataPkg.Parent == null)
-                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+                // File not found; add to datasetFilesToArchive
+                if (dataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
-                lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
+                datasetFilesToArchive.Add(new FileInfoObject(localFile.FullName, dataPkg.Parent.FullName));
                 uploadInfo.FileCountNew++;
-                uploadInfo.Bytes += fiLocalFile.Length;
+                uploadInfo.Bytes += localFile.Length;
                 return;
             }
 
@@ -394,61 +396,61 @@ namespace DataPackage_Archive_Manager
             }
 
             // Compare file size
-            if (fiLocalFile.Length != archiveFile.FileInfo.FileSizeBytes)
+            if (localFile.Length != archiveFile.FileInfo.FileSizeBytes)
             {
-                // Sizes don't match; add to lstDatasetFilesToArchive
-                if (diDataPkg.Parent == null)
-                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+                // Sizes don't match; add to datasetFilesToArchive
+                if (dataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
-                lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, diDataPkg.Parent.FullName));
+                datasetFilesToArchive.Add(new FileInfoObject(localFile.FullName, dataPkg.Parent.FullName));
                 uploadInfo.FileCountUpdated++;
-                uploadInfo.Bytes += fiLocalFile.Length;
+                uploadInfo.Bytes += localFile.Length;
                 return;
             }
 
             // File sizes match
-            // Compare Sha-1 hash if the file is less than 1 month old or
+            // Compare SHA-1 hash if the file is less than 1 month old or
             // if the file is less than 6 months old and less than 50 MB in size
 
             const int THRESHOLD_50_MB = 50 * 1024 * 1024;
 
-            if (fiLocalFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
-                fiLocalFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && fiLocalFile.Length < THRESHOLD_50_MB)
+            if (localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
+                localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && localFile.Length < THRESHOLD_50_MB)
             {
-                var sha1HashHex = Utilities.GenerateSha1Hash(fiLocalFile.FullName);
+                var sha1HashHex = Utilities.GenerateSha1Hash(localFile.FullName);
 
                 if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
                 {
-                    if (diDataPkg.Parent == null)
-                        throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+                    if (dataPkg.Parent == null)
+                        throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
-                    // Hashes don't match; add to lstDatasetFilesToArchive
+                    // Hashes don't match; add to datasetFilesToArchive
                     // We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
-                    var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(fiLocalFile.DirectoryName,
-                                                                                           diDataPkg.Parent.FullName);
+                    var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(localFile.DirectoryName,
+                                                                                           dataPkg.Parent.FullName);
 
-                    lstDatasetFilesToArchive.Add(new FileInfoObject(fiLocalFile.FullName, relativeDestinationDirectory, sha1HashHex));
+                    datasetFilesToArchive.Add(new FileInfoObject(localFile.FullName, relativeDestinationDirectory, sha1HashHex));
                     uploadInfo.FileCountUpdated++;
-                    uploadInfo.Bytes += fiLocalFile.Length;
+                    uploadInfo.Bytes += localFile.Length;
                 }
             }
         }
 
         private IEnumerable<DataPackageInfo> GetFilteredDataPackageInfoList(
-            IEnumerable<DataPackageInfo> lstDataPkgInfo,
+            IEnumerable<DataPackageInfo> dataPkgInfo,
             IEnumerable<int> dataPkgGroup)
         {
-            var lstFilteredDataPkgInfo =
-                (from item in lstDataPkgInfo
+            var filteredDataPkgInfo =
+                (from item in dataPkgInfo
                  join dataPkgID in dataPkgGroup on item.ID equals dataPkgID
                  select item).ToList();
 
-            return lstFilteredDataPkgInfo;
+            return filteredDataPkgInfo;
         }
 
         private Dictionary<int, MyEMSLStatusInfo> GetStatusURIs(int retryCount)
         {
-            var dctURIs = new Dictionary<int, MyEMSLStatusInfo>();
+            var statusURIs = new Dictionary<int, MyEMSLStatusInfo>();
             var dateThreshold = DateTime.Now.AddDays(-45);
 
             var sql = string.Format(
@@ -476,7 +478,7 @@ namespace DataPackage_Archive_Manager
 
                 var statusNum = row[3].CastDBVal<int>();
 
-                if (dctURIs.ContainsKey(statusNum))
+                if (statusURIs.ContainsKey(statusNum))
                 {
                     var msg = "Error, StatusNum " + statusNum + " is defined for multiple data packages";
                     ReportError(msg, true);
@@ -491,11 +493,11 @@ namespace DataPackage_Archive_Manager
                     statusInfo.SharePath = row["Share_Path"].CastDBVal<string>();
                     statusInfo.LocalPath = row["Local_Path"].CastDBVal<string>();
 
-                    dctURIs.Add(statusNum, statusInfo);
+                    statusURIs.Add(statusNum, statusInfo);
                 }
             }
 
-            return dctURIs;
+            return statusURIs;
         }
 
         private void Initialize()
@@ -515,9 +517,9 @@ namespace DataPackage_Archive_Manager
             LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.INFO, msg);
         }
 
-        private List<DataPackageInfo> LookupDataPkgInfo(IReadOnlyList<KeyValuePair<int, int>> lstDataPkgIDs)
+        private List<DataPackageInfo> LookupDataPkgInfo(IReadOnlyList<KeyValuePair<int, int>> dataPkgIDs)
         {
-            var lstDataPkgInfo = new List<DataPackageInfo>();
+            var dataPkgInfo = new List<DataPackageInfo>();
             var sql = new StringBuilder();
 
             sql.Append(" SELECT ID, Name, Owner, Instrument, " +
@@ -525,26 +527,28 @@ namespace DataPackage_Archive_Manager
                        " Package_File_Folder, Share_Path, Local_Path, MyEMSL_Uploads " +
                        " FROM V_Data_Package_Export");
 
-            if (lstDataPkgIDs.Count > 0)
+            if (dataPkgIDs.Count > 0)
             {
                 sql.Append(" WHERE ");
 
-                for (var i = 0; i < lstDataPkgIDs.Count; i++)
+                for (var i = 0; i < dataPkgIDs.Count; i++)
                 {
                     if (i > 0)
+                    {
                         sql.Append(" OR ");
-
-                    if (lstDataPkgIDs[i].Key == lstDataPkgIDs[i].Value)
-                    {
-                        sql.AppendFormat("ID = {0}", lstDataPkgIDs[i].Key);
                     }
-                    else if (lstDataPkgIDs[i].Value < 0)
+
+                    if (dataPkgIDs[i].Key == dataPkgIDs[i].Value)
                     {
-                        sql.AppendFormat("ID >= {0}", lstDataPkgIDs[i].Key);
+                        sql.AppendFormat("ID = {0}", dataPkgIDs[i].Key);
+                    }
+                    else if (dataPkgIDs[i].Value < 0)
+                    {
+                        sql.AppendFormat("ID >= {0}", dataPkgIDs[i].Key);
                     }
                     else
                     {
-                        sql.AppendFormat("ID BETWEEN {0} AND {1}", lstDataPkgIDs[i].Key, lstDataPkgIDs[i].Value);
+                        sql.AppendFormat("ID BETWEEN {0} AND {1}", dataPkgIDs[i].Key, dataPkgIDs[i].Value);
                     }
                 }
             }
@@ -560,7 +564,7 @@ namespace DataPackage_Archive_Manager
             {
                 var dataPkgID = row[0].CastDBVal<int>();
 
-                var dataPkgInfo = new DataPackageInfo(dataPkgID)
+                var dataPkg = new DataPackageInfo(dataPkgID)
                 {
                     Name = row["Name"].CastDBVal<string>(),
                     OwnerPRN = row["Owner"].CastDBVal<string>(),
@@ -575,10 +579,10 @@ namespace DataPackage_Archive_Manager
                     MyEMSLUploads = row["MyEMSL_Uploads"].CastDBVal<int>()
                 };
 
-                lstDataPkgInfo.Add(dataPkgInfo);
+                dataPkgInfo.Add(dataPkg);
             }
 
-            return lstDataPkgInfo;
+            return dataPkgInfo;
         }
 
         /// <summary>
@@ -591,10 +595,10 @@ namespace DataPackage_Archive_Manager
         /// In that case, the KeyValuePair will be (300,-1)</remarks>
         public List<KeyValuePair<int, int>> ParseDataPkgIDList(string dataPkgIDList)
         {
-            var lstValues = dataPkgIDList.Split(',').ToList();
-            var lstDataPkgIDs = new List<KeyValuePair<int, int>>();
+            var values = dataPkgIDList.Split(',').ToList();
+            var dataPkgIDs = new List<KeyValuePair<int, int>>();
 
-            foreach (var item in lstValues)
+            foreach (var item in values)
             {
                 if (!string.IsNullOrWhiteSpace(item))
                 {
@@ -635,8 +639,8 @@ namespace DataPackage_Archive_Manager
                     {
                         var idRange = new KeyValuePair<int, int>(dataPkgIDStart, dataPkgIDEnd);
 
-                        if (!lstDataPkgIDs.Contains(idRange))
-                            lstDataPkgIDs.Add(idRange);
+                        if (!dataPkgIDs.Contains(idRange))
+                            dataPkgIDs.Add(idRange);
                     }
                     else
                     {
@@ -645,27 +649,27 @@ namespace DataPackage_Archive_Manager
                 }
             }
 
-            return lstDataPkgIDs;
+            return dataPkgIDs;
         }
 
         /// <summary>
-        /// Update the data packages in lstDataPkgIDs
+        /// Update the data packages in dataPkgIDs
         /// </summary>
-        /// <param name="lstDataPkgIDs"></param>
+        /// <param name="dataPkgIDs"></param>
         /// <param name="dateThreshold"></param>
         /// <returns></returns>
-        public bool ProcessDataPackages(List<KeyValuePair<int, int>> lstDataPkgIDs, DateTime dateThreshold)
+        public bool ProcessDataPackages(List<KeyValuePair<int, int>> dataPkgIDs, DateTime dateThreshold)
         {
-            List<DataPackageInfo> lstDataPkgInfo;
+            List<DataPackageInfo> dataPkgInfo;
             var successCount = 0;
 
             try
             {
-                lstDataPkgInfo = LookupDataPkgInfo(lstDataPkgIDs);
+                dataPkgInfo = LookupDataPkgInfo(dataPkgIDs);
 
-                if (lstDataPkgInfo.Count == 0)
+                if (dataPkgInfo.Count == 0)
                 {
-                    ReportError("None of the data packages in lstDataPkgIDs corresponded to a known data package ID");
+                    ReportError("None of the data packages in dataPkgIDs corresponded to a known data package ID");
                     return false;
                 }
 
@@ -675,55 +679,55 @@ namespace DataPackage_Archive_Manager
                 }
 
                 // List of groups of data package IDs
-                var lstDataPkgGroups = new List<List<int>>();
-                var lstCurrentGroup = new List<int>();
-                var dtLastProgress = DateTime.UtcNow.AddSeconds(-10);
-                var dtLastSimpleSearchVerify = DateTime.MinValue;
+                var dataPkgGroups = new List<List<int>>();
+                var currentGroup = new List<int>();
+                var lastProgress = DateTime.UtcNow.AddSeconds(-10);
+                var lastSimpleSearchVerify = DateTime.MinValue;
 
                 var runningCount = 0;
 
-                ReportMessage("Finding data package files for " + lstDataPkgInfo.Count + " data packages");
+                ReportMessage("Finding data package files for " + dataPkgInfo.Count + " data packages");
 
                 // Determine the number of files that are associated with each data package
                 // We will use this information to process the data packages in chunks
-                for (var i = 0; i < lstDataPkgInfo.Count; i++)
+                for (var i = 0; i < dataPkgInfo.Count; i++)
                 {
-                    var fileCount = CountFilesForDataPackage(lstDataPkgInfo[i]);
+                    var fileCount = CountFilesForDataPackage(dataPkgInfo[i]);
 
-                    if (runningCount + fileCount > 5000 || lstCurrentGroup.Count >= 30)
+                    if (runningCount + fileCount > 5000 || currentGroup.Count >= 30)
                     {
                         // Store the current group
-                        if (lstCurrentGroup.Count > 0)
-                            lstDataPkgGroups.Add(lstCurrentGroup);
+                        if (currentGroup.Count > 0)
+                            dataPkgGroups.Add(currentGroup);
 
                         // Make a new group
-                        lstCurrentGroup = new List<int>
+                        currentGroup = new List<int>
                         {
-                            lstDataPkgInfo[i].ID
+                            dataPkgInfo[i].ID
                         };
                         runningCount = fileCount;
                     }
                     else
                     {
                         // Use the current group
-                        lstCurrentGroup.Add(lstDataPkgInfo[i].ID);
+                        currentGroup.Add(dataPkgInfo[i].ID);
                         runningCount += fileCount;
                     }
 
-                    if (DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 20)
+                    if (DateTime.UtcNow.Subtract(lastProgress).TotalSeconds >= 20)
                     {
-                        dtLastProgress = DateTime.UtcNow;
-                        ReportMessage("Finding data package files; examined " + i + " of " + lstDataPkgInfo.Count + " data packages");
+                        lastProgress = DateTime.UtcNow;
+                        ReportMessage("Finding data package files; examined " + i + " of " + dataPkgInfo.Count + " data packages");
                     }
                 }
 
                 // Store the current group
-                if (lstCurrentGroup.Count > 0)
-                    lstDataPkgGroups.Add(lstCurrentGroup);
+                if (currentGroup.Count > 0)
+                    dataPkgGroups.Add(currentGroup);
 
                 var groupNumber = 0;
 
-                foreach (var dataPkgGroup in lstDataPkgGroups)
+                foreach (var dataPkgGroup in dataPkgGroups)
                 {
                     groupNumber++;
 
@@ -741,7 +745,7 @@ namespace DataPackage_Archive_Manager
                         dataPackageInfoCache.AddDataPackage(dataPkgID);
                     }
 
-                    if (!PreviewMode && DateTime.UtcNow.Subtract(dtLastSimpleSearchVerify).TotalMinutes > 15)
+                    if (!PreviewMode && DateTime.UtcNow.Subtract(lastSimpleSearchVerify).TotalMinutes > 15)
                     {
                         // Verify that MyEMSL is returning expected results for data packages known to have been stored previously in MyEMSL
                         // If no results are found, we will presume that MyEMSL is not available, or is available but is misconfigured (or has permissions issues)
@@ -755,19 +759,19 @@ namespace DataPackage_Archive_Manager
                             return false;
                         }
 
-                        dtLastSimpleSearchVerify = DateTime.UtcNow;
+                        lastSimpleSearchVerify = DateTime.UtcNow;
                     }
 
-                    // Pre-populate lstDataPackageInfoCache with the files for the current group
-                    ReportMessage("Querying MyEMSL for " + dataPkgGroup.Count + " data packages in group " + groupNumber + " of " + lstDataPkgGroups.Count);
+                    // Pre-populate dataPackageInfoCache with the files for the current group
+                    ReportMessage("Querying MyEMSL for " + dataPkgGroup.Count + " data packages in group " + groupNumber + " of " + dataPkgGroups.Count);
                     dataPackageInfoCache.RefreshInfo();
 
                     // Obtain the DataPackageInfo objects for the IDs in dataPkgGroup
-                    var lstFilteredDataPkgInfo = GetFilteredDataPackageInfoList(lstDataPkgInfo, dataPkgGroup);
+                    var filteredDataPkgInfo = GetFilteredDataPackageInfoList(dataPkgInfo, dataPkgGroup);
 
-                    foreach (var dataPkgInfo in lstFilteredDataPkgInfo)
+                    foreach (var dataPkg in filteredDataPkgInfo)
                     {
-                        var success = ProcessOneDataPackage(dataPkgInfo, dateThreshold, dataPackageInfoCache);
+                        var success = ProcessOneDataPackage(dataPkg, dateThreshold, dataPackageInfoCache);
 
                         if (success)
                             successCount++;
@@ -784,10 +788,10 @@ namespace DataPackage_Archive_Manager
                 return false;
             }
 
-            if (successCount == lstDataPkgInfo.Count)
+            if (successCount == dataPkgInfo.Count)
             {
                 if (successCount == 1)
-                    ReportMessage("Processing complete for Data Package " + lstDataPkgInfo.First().ID);
+                    ReportMessage("Processing complete for Data Package " + dataPkgInfo.First().ID);
                 else
                     ReportMessage("Processed " + successCount + " data packages");
 
@@ -802,12 +806,12 @@ namespace DataPackage_Archive_Manager
             if (PreviewMode)
                 return true;
 
-            if (lstDataPkgInfo.Count == 1)
-                ReportError("Failed to archive Data Package " + lstDataPkgIDs.First());
+            if (dataPkgInfo.Count == 1)
+                ReportError("Failed to archive Data Package " + dataPkgIDs.First());
             else if (successCount == 0)
-                ReportError("Failed to archive any of the " + lstDataPkgIDs.Count + " candidate data packages", true);
+                ReportError("Failed to archive any of the " + dataPkgIDs.Count + " candidate data packages", true);
             else
-                ReportError("Failed to archive " + (lstDataPkgInfo.Count - successCount) + " data package(s); successfully archived " + successCount + " data package(s)", true);
+                ReportError("Failed to archive " + (dataPkgInfo.Count - successCount) + " data package(s); successfully archived " + successCount + " data package(s)", true);
 
             return false;
         }
@@ -821,41 +825,41 @@ namespace DataPackage_Archive_Manager
             var uploadInfo = new MyEMSLUploadInfo();
             uploadInfo.Clear();
 
-            var dtStartTime = DateTime.UtcNow;
+            var startTime = DateTime.UtcNow;
 
             try
             {
-                var diDataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
-                if (!diDataPkg.Exists)
-                    diDataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
+                var dataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
+                if (!dataPkg.Exists)
+                    dataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
 
-                if (!diDataPkg.Exists)
+                if (!dataPkg.Exists)
                 {
                     ReportMessage("Data package folder not found (also tried remote share path): " + dataPkgInfo.LocalPath, BaseLogger.LogLevels.WARN);
                     return false;
                 }
 
-                if (diDataPkg.Parent == null)
-                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+                if (dataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
                 // Look for an existing metadata file
-                // For example, \\protoapps\dataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
-                var metadataFilePath = Path.Combine(diDataPkg.Parent.FullName, Utilities.GetMetadataFilenameForJob(dataPkgInfo.ID.ToString(CultureInfo.InvariantCulture)));
-                var fiMetadataFile = new FileInfo(metadataFilePath);
-                if (fiMetadataFile.Exists)
+                // For example, \\protoapps\DataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
+                var metadataFilePath = Path.Combine(dataPkg.Parent.FullName, Utilities.GetMetadataFilenameForJob(dataPkgInfo.ID.ToString(CultureInfo.InvariantCulture)));
+                var metadataFile = new FileInfo(metadataFilePath);
+                if (metadataFile.Exists)
                 {
-                    if (DateTime.UtcNow.Subtract(fiMetadataFile.LastWriteTimeUtc).TotalHours >= 48)
+                    if (DateTime.UtcNow.Subtract(metadataFile.LastWriteTimeUtc).TotalHours >= 48)
                     {
-                        if (DateTime.UtcNow.Subtract(fiMetadataFile.LastWriteTimeUtc).TotalDays > 6.5)
+                        if (DateTime.UtcNow.Subtract(metadataFile.LastWriteTimeUtc).TotalDays > 6.5)
                         {
-                            ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file over 6.5 days old; deleting file: " + fiMetadataFile.FullName, true);
-                            fiMetadataFile.Delete();
+                            ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file over 6.5 days old; deleting file: " + metadataFile.FullName, true);
+                            metadataFile.Delete();
                         }
                         else
                         {
                             // This is likely an error, but we don't want to re-upload the files yet
                             // Log an error to the database
-                            ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file between 2 and 6.5 days old: " + fiMetadataFile.FullName, true);
+                            ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file between 2 and 6.5 days old: " + metadataFile.FullName, true);
 
                             // This is not a fatal error; return true
                             return true;
@@ -864,7 +868,7 @@ namespace DataPackage_Archive_Manager
                     else
                     {
                         ReportMessage("Data Package " + dataPkgInfo.ID + " has an existing metadata file less than 48 hours old; skipping this data package", BaseLogger.LogLevels.WARN);
-                        ReportMessage("  " + fiMetadataFile.FullName, BaseLogger.LogLevels.DEBUG);
+                        ReportMessage("  " + metadataFile.FullName, BaseLogger.LogLevels.DEBUG);
 
                         // This is not a fatal error; return true
                         return true;
@@ -872,14 +876,14 @@ namespace DataPackage_Archive_Manager
                 }
 
                 // Compare the files to those already in MyEMSL to create a list of files to be uploaded
-                var lstUnmatchedFiles = FindDataPackageFilesToArchive(
+                var unmatchedFiles = FindDataPackageFilesToArchive(
                     dataPkgInfo,
-                    diDataPkg,
+                    dataPkg,
                     dateThreshold,
                     dataPackageInfoCache,
                     out uploadInfo);
 
-                if (lstUnmatchedFiles.Count == 0)
+                if (unmatchedFiles.Count == 0)
                 {
                     // Nothing to do
                     return true;
@@ -912,10 +916,10 @@ namespace DataPackage_Archive_Manager
 
                 if (PreviewMode)
                 {
-                    ReportMessage("Need to upload " + lstUnmatchedFiles.Count + " file(s) for Data Package " + dataPkgInfo.ID);
+                    ReportMessage("Need to upload " + unmatchedFiles.Count + " file(s) for Data Package " + dataPkgInfo.ID);
 
                     // Preview the changes
-                    foreach (var unmatchedFile in lstUnmatchedFiles)
+                    foreach (var unmatchedFile in unmatchedFiles)
                     {
                         Console.WriteLine("  " + unmatchedFile.RelativeDestinationFullPath);
                     }
@@ -923,7 +927,7 @@ namespace DataPackage_Archive_Manager
                 else
                 {
                     // Upload the files
-                    ReportMessage("Uploading " + lstUnmatchedFiles.Count + " new/changed files for Data Package " + dataPkgInfo.ID);
+                    ReportMessage("Uploading " + unmatchedFiles.Count + " new/changed files for Data Package " + dataPkgInfo.ID);
 
                     var uploadMetadata = new Upload.UploadMetadata();
                     uploadMetadata.Clear();
@@ -972,17 +976,17 @@ namespace DataPackage_Archive_Manager
                     }
 
                     // Instantiate the metadata object
-                    var metadataObject = Upload.CreatePacificaMetadataObject(uploadMetadata, lstUnmatchedFiles, out _);
+                    var metadataObject = Upload.CreatePacificaMetadataObject(uploadMetadata, unmatchedFiles, out _);
 
                     var metadataDescription = Upload.GetMetadataObjectDescription(metadataObject);
                     ReportMessage("UploadMetadata: " + metadataDescription);
 
-                    mMyEMSLUploader.TransferFolderPath = diDataPkg.Parent.FullName;
+                    mMyEMSLUploader.TransferFolderPath = dataPkg.Parent.FullName;
                     mMyEMSLUploader.JobNumber = dataPkgInfo.ID.ToString();
 
                     success = mMyEMSLUploader.StartUpload(metadataObject, out var statusURL);
 
-                    var tsElapsedTime = DateTime.UtcNow.Subtract(dtStartTime);
+                    var tsElapsedTime = DateTime.UtcNow.Subtract(startTime);
 
                     uploadInfo.UploadTimeSeconds = tsElapsedTime.TotalSeconds;
                     uploadInfo.StatusURI = statusURL;
@@ -1020,7 +1024,7 @@ namespace DataPackage_Archive_Manager
                 if (uploadInfo.ErrorCode == 0)
                     uploadInfo.ErrorCode = 1;
 
-                uploadInfo.UploadTimeSeconds = DateTime.UtcNow.Subtract(dtStartTime).TotalSeconds;
+                uploadInfo.UploadTimeSeconds = DateTime.UtcNow.Subtract(startTime).TotalSeconds;
 
                 StoreMyEMSLUploadStats(dataPkgInfo, uploadInfo);
 
@@ -1068,18 +1072,18 @@ namespace DataPackage_Archive_Manager
         }
 
         /// <summary>
-        /// Update the data packages in lstDataPkgIDs, then verify the upload status
+        /// Update the data packages in dataPkgIDs, then verify the upload status
         /// </summary>
-        /// <param name="lstDataPkgIDs"></param>
+        /// <param name="dataPkgIDs"></param>
         /// <param name="dateThreshold"></param>
         /// <param name="previewMode"></param>
         /// <returns></returns>
-        public bool StartProcessing(List<KeyValuePair<int, int>> lstDataPkgIDs, DateTime dateThreshold, bool previewMode)
+        public bool StartProcessing(List<KeyValuePair<int, int>> dataPkgIDs, DateTime dateThreshold, bool previewMode)
         {
             PreviewMode = previewMode;
 
             // Upload new data
-            var success = ProcessDataPackages(lstDataPkgIDs, dateThreshold);
+            var success = ProcessDataPackages(dataPkgIDs, dateThreshold);
 
             if (DisableVerify)
                 return success;
@@ -1177,7 +1181,7 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Search MyEMSL for expected filenames for specific data packages
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True if the expected results are found or if SkipCheckExisting is true; otherwise False</returns>
         public bool VerifyKnownMyEMSLSearchResults()
         {
             if (SkipCheckExisting)
@@ -1290,9 +1294,9 @@ namespace DataPackage_Archive_Manager
             // First obtain a list of status URIs to check
             // Keys are StatusNum integers, values are StatusURI strings
             const int retryCount = 2;
-            var dctURIs = GetStatusURIs(retryCount);
+            var uRIs = GetStatusURIs(retryCount);
 
-            if (dctURIs.Count == 0)
+            if (uRIs.Count == 0)
             {
                 // Nothing to do
                 return true;
@@ -1301,10 +1305,10 @@ namespace DataPackage_Archive_Manager
             try
             {
                 // Confirm that the data packages are visible in MyEMSL Metadata
-                // To avoid obtaining too many results from MyEMSL, process the data packages in dctURIs in groups, 5 at a time
-                // First construct a unique list of the Data Package IDs in dctURIs
+                // To avoid obtaining too many results from MyEMSL, process the data packages in uRIs in groups, 5 at a time
+                // First construct a unique list of the Data Package IDs in uRIs
 
-                var distinctDataPackageIDs = (from item in dctURIs select item.Value.DataPackageID).Distinct().ToList();
+                var distinctDataPackageIDs = (from item in uRIs select item.Value.DataPackageID).Distinct().ToList();
                 const int DATA_PACKAGE_GROUP_SIZE = 5;
 
                 var statusChecker = new MyEMSLStatusCheck();
@@ -1321,7 +1325,7 @@ namespace DataPackage_Archive_Manager
 
                     RegisterEvents(dataPackageInfoCache);
 
-                    var dctURIsInGroup = new Dictionary<int, MyEMSLStatusInfo>();
+                    var uRIsInGroup = new Dictionary<int, MyEMSLStatusInfo>();
 
                     for (var j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
                     {
@@ -1332,20 +1336,20 @@ namespace DataPackage_Archive_Manager
                         dataPackageInfoCache.AddDataPackage(currentDataPackageID);
 
                         // Find all of the URIs for this data package
-                        var query = from item in dctURIs where item.Value.DataPackageID == currentDataPackageID select item;
+                        var query = from item in uRIs where item.Value.DataPackageID == currentDataPackageID select item;
 
                         foreach (var uriItem in query)
                         {
-                            dctURIsInGroup.Add(uriItem.Key, uriItem.Value);
+                            uRIsInGroup.Add(uriItem.Key, uriItem.Value);
                         }
                     }
 
-                    // Pre-populate lstDataPackageInfoCache with the files for the current group
+                    // Pre-populate dataPackageInfoCache with the files for the current group
                     dataPackageInfoCache.RefreshInfo();
 
                     var exceptionCount = 0;
 
-                    foreach (var statusInfo in dctURIsInGroup)
+                    foreach (var statusInfo in uRIsInGroup)
                     {
                         var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache, ref exceptionCount);
 
@@ -1449,36 +1453,36 @@ namespace DataPackage_Archive_Manager
                     return UploadStatus.Success;
                 }
 
-                var diDataPkg = new DirectoryInfo(statusInfo.Value.LocalPath);
-                if (!diDataPkg.Exists)
+                var dataPkg = new DirectoryInfo(statusInfo.Value.LocalPath);
+                if (!dataPkg.Exists)
                 {
-                    diDataPkg = new DirectoryInfo(statusInfo.Value.SharePath);
+                    dataPkg = new DirectoryInfo(statusInfo.Value.SharePath);
                 }
 
-                if (!diDataPkg.Exists)
+                if (!dataPkg.Exists)
                 {
-                    OnErrorEvent("Data package folder not found by VerifyUploadStatusWork, this is unexpected; see: " + diDataPkg.FullName);
+                    OnErrorEvent("Data package folder not found by VerifyUploadStatusWork, this is unexpected; see: " + dataPkg.FullName);
 
                     UpdateMyEMSLUploadStatus(statusInfo.Value, verified: false);
 
                     return UploadStatus.Success;
                 }
 
-                if (diDataPkg.Parent == null)
-                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + diDataPkg.FullName);
+                if (dataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
                 // Construct the metadata file path
                 // For example, \\protoapps\dataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
-                var metadataFilePath = Path.Combine(diDataPkg.Parent.FullName,
+                var metadataFilePath = Path.Combine(dataPkg.Parent.FullName,
                                                     Utilities.GetMetadataFilenameForJob(
                                                         statusInfo.Value.DataPackageID.ToString(CultureInfo.InvariantCulture)));
 
-                var fiMetadataFile = new FileInfo(metadataFilePath);
+                var metadataFile = new FileInfo(metadataFilePath);
 
-                if (fiMetadataFile.Exists)
+                if (metadataFile.Exists)
                 {
                     var msg = "Deleting metadata file for Data package " + statusInfo.Value.DataPackageID +
-                              " since it is now available and verified: " + fiMetadataFile.FullName;
+                              " since it is now available and verified: " + metadataFile.FullName;
 
                     if (PreviewMode)
                     {
@@ -1487,7 +1491,7 @@ namespace DataPackage_Archive_Manager
                     else
                     {
                         ReportMessage(msg);
-                        fiMetadataFile.Delete();
+                        metadataFile.Delete();
                     }
                 }
 

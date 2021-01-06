@@ -89,18 +89,18 @@ namespace DataPackage_Archive_Manager
                 }
                 else
                 {
-                    List<KeyValuePair<int, int>> lstDataPkgIDs;
+                    List<KeyValuePair<int, int>> dataPkgIDs;
                     if (options.PackageIds.StartsWith("*"))
                     {
                         // Process all Data Packages by passing an empty list to ParseDataPkgIDList
-                        lstDataPkgIDs = new List<KeyValuePair<int, int>>();
+                        dataPkgIDs = new List<KeyValuePair<int, int>>();
                     }
                     else
                     {
                         // Parse the data package ID list
-                        lstDataPkgIDs = archiver.ParseDataPkgIDList(options.PackageIds);
+                        dataPkgIDs = archiver.ParseDataPkgIDList(options.PackageIds);
 
-                        if (lstDataPkgIDs.Count == 0)
+                        if (dataPkgIDs.Count == 0)
                         {
                             // Data Package IDs not defined
                             ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
@@ -110,7 +110,7 @@ namespace DataPackage_Archive_Manager
                     }
 
                     // Upload new data, then verify previously updated data
-                    success = archiver.StartProcessing(lstDataPkgIDs, options.DateThreshold, options.PreviewMode);
+                    success = archiver.StartProcessing(dataPkgIDs, options.DateThreshold, options.PreviewMode);
                 }
 
                 FileLogger.FlushPendingMessages();
