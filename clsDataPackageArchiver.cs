@@ -386,7 +386,7 @@ namespace DataPackage_Archive_Manager
                 if (dataPkg.Parent == null)
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
-                datasetFilesToArchive.Add(new FileInfoObject(localFile.FullName, dataPkg.Parent.FullName));
+                datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
                 uploadInfo.FileCountNew++;
                 uploadInfo.Bytes += localFile.Length;
                 return;
@@ -408,7 +408,7 @@ namespace DataPackage_Archive_Manager
                 if (dataPkg.Parent == null)
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
-                datasetFilesToArchive.Add(new FileInfoObject(localFile.FullName, dataPkg.Parent.FullName));
+                datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
                 uploadInfo.FileCountUpdated++;
                 uploadInfo.Bytes += localFile.Length;
                 return;
@@ -423,7 +423,7 @@ namespace DataPackage_Archive_Manager
             if (localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
                 localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && localFile.Length < THRESHOLD_50_MB)
             {
-                var sha1HashHex = Utilities.GenerateSha1Hash(localFile.FullName);
+                var sha1HashHex = Utilities.GenerateSha1Hash(localFile);
 
                 if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
                 {
@@ -435,7 +435,7 @@ namespace DataPackage_Archive_Manager
                     var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(localFile.DirectoryName,
                                                                                            dataPkg.Parent.FullName);
 
-                    datasetFilesToArchive.Add(new FileInfoObject(localFile.FullName, relativeDestinationDirectory, sha1HashHex));
+                    datasetFilesToArchive.Add(new FileInfoObject(localFile, relativeDestinationDirectory, sha1HashHex));
                     uploadInfo.FileCountUpdated++;
                     uploadInfo.Bytes += localFile.Length;
                 }
