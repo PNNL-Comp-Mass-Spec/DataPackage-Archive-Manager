@@ -19,7 +19,7 @@ namespace DataPackage_Archive_Manager
 
     internal static class Program
     {
-        public const string PROGRAM_DATE = "January 5, 2021";
+        public const string PROGRAM_DATE = "June 7, 2021";
 
         private static BaseLogger.LogLevels mLogLevel;
 
