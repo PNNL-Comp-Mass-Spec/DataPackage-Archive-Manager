@@ -62,7 +62,7 @@ namespace DataPackage_Archive_Manager
             public string SubDir;
             public int FileCountNew;
             public int FileCountUpdated;
-            public Int64 Bytes;
+            public long Bytes;
             public double UploadTimeSeconds;
             public string StatusURI;
             public int ErrorCode;
