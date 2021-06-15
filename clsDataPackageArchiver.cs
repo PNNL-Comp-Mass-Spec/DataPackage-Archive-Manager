@@ -1097,6 +1097,7 @@ namespace DataPackage_Archive_Manager
             return success;
         }
 
+        // ReSharper disable once UnusedMethodReturnValue.Local
         private bool StoreMyEMSLUploadStats(DataPackageInfo dataPkgInfo, MyEMSLUploadInfo uploadInfo)
         {
             try
@@ -1142,6 +1143,7 @@ namespace DataPackage_Archive_Manager
         /// <param name="statusInfo"></param>
         /// <param name="verified"></param>
         /// <returns>Assumes that Available = true</returns>
+        // ReSharper disable once UnusedMethodReturnValue.Local
         private bool UpdateMyEMSLUploadStatus(MyEMSLStatusInfo statusInfo, bool verified)
         {
             try
