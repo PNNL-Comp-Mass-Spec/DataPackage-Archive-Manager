@@ -15,11 +15,10 @@ namespace DataPackage_Archive_Manager
     // E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov
     // Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov
     // -------------------------------------------------------------------------------
-    //
 
     internal static class Program
     {
-        public const string PROGRAM_DATE = "June 8, 2021";
+        public const string PROGRAM_DATE = "June 15, 2021";
 
         private static BaseLogger.LogLevels mLogLevel;
 

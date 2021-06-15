@@ -32,8 +32,14 @@ namespace DataPackage_Archive_Manager
         [Option("debug", HelpText = "Enable the display (and logging) of debug messages; implies 'trace'")]
         public bool DebugMode { get; set; }
 
+        /// <summary>
+        /// Date threshold
+        /// </summary>
         public DateTime DateThreshold { get; set; }
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public CommandLineOptions()
         {
             DateThreshold = DateTime.MinValue;
@@ -43,6 +49,9 @@ namespace DataPackage_Archive_Manager
             DBConnectionString = DataPackageArchiver.CONNECTION_STRING;
         }
 
+        /// <summary>
+        /// Validate options
+        /// </summary>
         public bool Validate()
         {
             if (string.IsNullOrWhiteSpace(PackageIds))

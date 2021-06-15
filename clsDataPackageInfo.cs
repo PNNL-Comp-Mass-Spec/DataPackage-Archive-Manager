@@ -83,6 +83,10 @@ namespace DataPackage_Archive_Manager
             LocalPath = string.Empty;
         }
 
+        /// <summary>
+        /// Show the data package ID
+        /// </summary>
+        /// <returns></returns>
         public override string ToString()
         {
             return ID.ToString();

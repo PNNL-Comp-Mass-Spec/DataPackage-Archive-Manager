@@ -93,12 +93,24 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         public string DBConnectionString { get; }
 
+        /// <summary>
+        /// Error message
+        /// </summary>
         public string ErrorMessage { get; private set; }
 
+        /// <summary>
+        /// True if previewing updates
+        /// </summary>
         public bool PreviewMode { get; set; }
 
+        /// <summary>
+        /// When true, skip checking existing data packages
+        /// </summary>
         public bool SkipCheckExisting { get; set; }
 
+        /// <summary>
+        /// True if trace mode is enabled
+        /// </summary>
         public bool TraceMode { get; set; }
 
         /// <summary>
@@ -648,7 +660,7 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         /// <param name="dataPkgIDs"></param>
         /// <param name="dateThreshold"></param>
-        /// <returns></returns>
+        /// <returns>True if successful, false if an error</returns>
         public bool ProcessDataPackages(List<KeyValuePair<int, int>> dataPkgIDs, DateTime dateThreshold)
         {
             List<DataPackageInfo> dataPkgInfo;
@@ -1068,7 +1080,7 @@ namespace DataPackage_Archive_Manager
         /// <param name="dataPkgIDs"></param>
         /// <param name="dateThreshold"></param>
         /// <param name="previewMode"></param>
-        /// <returns></returns>
+        /// <returns>True if successful, false if an error</returns>
         public bool StartProcessing(List<KeyValuePair<int, int>> dataPkgIDs, DateTime dateThreshold, bool previewMode)
         {
             PreviewMode = previewMode;
