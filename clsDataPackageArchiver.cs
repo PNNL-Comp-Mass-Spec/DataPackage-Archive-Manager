@@ -1228,7 +1228,7 @@ namespace DataPackage_Archive_Manager
                 if (archiveFiles.Count == 0)
                 {
                     ReportError("MyEMSL did not return any files for the known data packages (" + dataPackageIDs.First().Key + "-" + dataPackageIDs.Last().Key + "); " +
-                                "the Metadata service must be disabled or broken at present.", true);
+                                "the Metadata service is likely disabled or broken at present.", true);
                     return false;
                 }
 
