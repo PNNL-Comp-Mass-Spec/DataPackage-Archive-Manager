@@ -603,52 +603,55 @@ namespace DataPackage_Archive_Manager
 
             foreach (var item in values)
             {
-                if (!string.IsNullOrWhiteSpace(item))
+                if (string.IsNullOrWhiteSpace(item))
                 {
-                    string startID;
-                    string endID;
+                    continue;
+                }
 
-                    // Check for a range of data package IDs
-                    var dashIndex = item.IndexOf("-", StringComparison.Ordinal);
-                    if (dashIndex == 0)
+                string startID;
+                string endID;
+
+                // Check for a range of data package IDs
+                var dashIndex = item.IndexOf("-", StringComparison.Ordinal);
+
+                if (dashIndex == 0)
+                {
+                    if (item.Length == 1)
                     {
-                        if (item.Length == 1)
-                        {
-                            ReportError("Invalid item; ignoring: " + item);
-                            continue;
-                        }
+                        ReportError("Invalid item; ignoring: " + item);
+                        continue;
+                    }
 
-                        // Range is 0 through the number after the dash
-                        startID = "0";
+                    // Range is 0 through the number after the dash
+                    startID = "0";
+                    endID = item.Substring(dashIndex + 1);
+                }
+                else if (dashIndex > 0)
+                {
+                    // Range is 0 through the number after the dash
+                    startID = item.Substring(0, dashIndex);
+
+                    if (dashIndex == item.Length - 1)
+                        endID = "-1";
+                    else
                         endID = item.Substring(dashIndex + 1);
-                    }
-                    else if (dashIndex > 0)
-                    {
-                        // Range is 0 through the number after the dash
-                        startID = item.Substring(0, dashIndex);
+                }
+                else
+                {
+                    startID = item;
+                    endID = item;
+                }
 
-                        if (dashIndex == item.Length - 1)
-                            endID = "-1";
-                        else
-                            endID = item.Substring(dashIndex + 1);
-                    }
-                    else
-                    {
-                        startID = item;
-                        endID = item;
-                    }
+                if (int.TryParse(startID, out var dataPkgIDStart) && int.TryParse(endID, out var dataPkgIDEnd))
+                {
+                    var idRange = new KeyValuePair<int, int>(dataPkgIDStart, dataPkgIDEnd);
 
-                    if (int.TryParse(startID, out var dataPkgIDStart) && int.TryParse(endID, out var dataPkgIDEnd))
-                    {
-                        var idRange = new KeyValuePair<int, int>(dataPkgIDStart, dataPkgIDEnd);
-
-                        if (!dataPkgIDs.Contains(idRange))
-                            dataPkgIDs.Add(idRange);
-                    }
-                    else
-                    {
-                        ReportError("Value is not an integer or range of integers; ignoring: " + item);
-                    }
+                    if (!dataPkgIDs.Contains(idRange))
+                        dataPkgIDs.Add(idRange);
+                }
+                else
+                {
+                    ReportError("Value is not an integer or range of integers; ignoring: " + item);
                 }
             }
 
