@@ -18,9 +18,9 @@ namespace DataPackage_Archive_Manager
 {
     internal class DataPackageArchiver : EventNotifier
     {
-        // Ignore Spelling: yyyy-MM-dd, UtcNow, pnl, misconfigured, DataPkgs, msgfdb
 
         #region "Constants"
+        // Ignore Spelling: DataPkgs, misconfigured, msgfdb, pnl, pre, protoapps, UtcNow, yyyy-MM-dd
 
         public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;";
 

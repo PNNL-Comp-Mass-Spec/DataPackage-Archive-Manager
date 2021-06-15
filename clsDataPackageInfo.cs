@@ -4,7 +4,7 @@ namespace DataPackage_Archive_Manager
 {
     internal class DataPackageInfo
     {
-        // Ignore Spelling: DataPkgs
+        // Ignore Spelling: DataPkgs, protoapps, username
 
         /// <summary>
         /// Data Package ID
