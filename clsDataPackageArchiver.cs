@@ -18,8 +18,6 @@ namespace DataPackage_Archive_Manager
 {
     internal class DataPackageArchiver : EventNotifier
     {
-
-        #region "Constants"
         // Ignore Spelling: DataPkgs, misconfigured, msgfdb, pnl, pre, protoapps, UtcNow, yyyy-MM-dd
 
         public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;";
@@ -48,9 +46,6 @@ namespace DataPackage_Archive_Manager
         /// </remarks>
         private const int MAX_FILES_TO_ARCHIVE = 600;
 
-        #endregion
-
-        #region "Structures"
         private struct MyEMSLStatusInfo
         {
             public int EntryID;
@@ -84,17 +79,9 @@ namespace DataPackage_Archive_Manager
             }
         }
 
-        #endregion
-
-        #region "Class variables"
-
         private readonly IDBTools mDBTools;
         private readonly Upload mMyEMSLUploader;
         private DateTime mLastStatusUpdate;
-
-        #endregion
-
-        #region "Auto properties"
 
         /// <summary>
         /// When true, skip verifying upload status
@@ -124,8 +111,6 @@ namespace DataPackage_Archive_Manager
         /// ERROR = 2,
         /// FATAL = 1</remarks>
         public BaseLogger.LogLevels LogLevel { get; }
-
-        #endregion
 
         /// <summary>
         /// Constructor
@@ -1526,8 +1511,6 @@ namespace DataPackage_Archive_Manager
             return UploadStatus.Success;
         }
 
-        #region "Event Handlers"
-
         private void MyEMSLUpload_StatusUpdate(object sender, StatusEventArgs e)
         {
             if (DateTime.UtcNow.Subtract(mLastStatusUpdate).TotalSeconds >= 5)
@@ -1550,8 +1533,5 @@ namespace DataPackage_Archive_Manager
 
             ReportMessage(msg);
         }
-
-        #endregion
-
     }
 }

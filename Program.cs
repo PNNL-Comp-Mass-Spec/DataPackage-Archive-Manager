@@ -138,8 +138,6 @@ namespace DataPackage_Archive_Manager
             ConsoleMsgUtils.ShowError(message, ex);
         }
 
-        #region "Event Handlers"
-
         private static void Archiver_DebugEvent(string message)
         {
             ConsoleMsgUtils.ShowDebug(message);
@@ -159,8 +157,5 @@ namespace DataPackage_Archive_Manager
         {
             ConsoleMsgUtils.ShowWarning(message);
         }
-
-        #endregion
-
     }
 }
