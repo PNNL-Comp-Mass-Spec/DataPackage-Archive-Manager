@@ -343,20 +343,22 @@ namespace DataPackage_Archive_Manager
                 AddFileIfArchiveRequired(dataPkg, ref uploadInfo, datasetFilesToArchive, localFile, archiveFiles);
 
                 filesProcessed++;
-                if (DateTime.UtcNow.Subtract(lastProgressDetail).TotalSeconds >= 5)
-                {
-                    lastProgressDetail = DateTime.UtcNow;
+                if (DateTime.UtcNow.Subtract(lastProgressDetail).TotalSeconds < 5)
+                    continue;
 
-                    var progressMessage = "Finding files to archive for Data Package " + dataPkgInfo.ID + ": " + filesProcessed + " / " + dataPackageFiles.Count;
-                    if (DateTime.UtcNow.Subtract(lastProgress).TotalSeconds >= 30)
-                    {
-                        lastProgress = DateTime.UtcNow;
-                        ReportMessage(progressMessage);
-                    }
-                    else
-                    {
-                        ReportMessage(progressMessage, BaseLogger.LogLevels.DEBUG);
-                    }
+                lastProgressDetail = DateTime.UtcNow;
+
+                var progressMessage = "Finding files to archive for Data Package " + dataPkgInfo.ID + ": " + filesProcessed + " / " +
+                                      dataPackageFiles.Count;
+
+                if (DateTime.UtcNow.Subtract(lastProgress).TotalSeconds >= 30)
+                {
+                    lastProgress = DateTime.UtcNow;
+                    ReportMessage(progressMessage);
+                }
+                else
+                {
+                    ReportMessage(progressMessage, BaseLogger.LogLevels.DEBUG);
                 }
             }
 
