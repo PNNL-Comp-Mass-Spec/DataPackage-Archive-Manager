@@ -4,6 +4,7 @@ using System.Threading;
 using PRISM;
 using PRISM.FileProcessor;
 using PRISM.Logging;
+using PRISMDatabaseUtils;
 
 namespace DataPackage_Archive_Manager
 {
@@ -18,7 +19,7 @@ namespace DataPackage_Archive_Manager
 
     internal static class Program
     {
-        public const string PROGRAM_DATE = "June 15, 2021";
+        public const string PROGRAM_DATE = "August 12, 2021";
 
         private static BaseLogger.LogLevels mLogLevel;
 
@@ -65,7 +66,9 @@ namespace DataPackage_Archive_Manager
                     return 0;
                 }
 
-                var archiver = new DataPackageArchiver(options.DBConnectionString, mLogLevel)
+                var connectionStringToUse = DbToolsFactory.AddApplicationNameToConnectionString(options.DBConnectionString, "DataPackageArchiveMgr");
+
+                var archiver = new DataPackageArchiver(connectionStringToUse, mLogLevel)
                 {
                     DisableVerify = options.DisableVerify,
                     SkipCheckExisting = options.SkipCheckExisting,
