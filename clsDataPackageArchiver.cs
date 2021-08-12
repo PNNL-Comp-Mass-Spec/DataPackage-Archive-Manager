@@ -279,7 +279,12 @@ namespace DataPackage_Archive_Manager
 
             if (dataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
             {
-                ReportError(" Data Package " + dataPkgInfo.ID + " has " + dataPackageFiles.Count + " files; the maximum number of files allowed in MyEMSL per data package is " + MAX_FILES_TO_ARCHIVE + "; zip up groups of files to reduce the total file count; see " + dataPkgInfo.SharePath, true);
+                ReportError(string.Format(
+                    " Data Package {0} has {1} files;" +
+                    " the maximum number of files allowed in MyEMSL per data package is {2};" +
+                    " zip up groups of files to reduce the total file count; see {3}",
+                    dataPkgInfo.ID, dataPackageFiles.Count, MAX_FILES_TO_ARCHIVE, dataPkgInfo.SharePath));
+
                 return new List<FileInfoObject>();
             }
 
@@ -294,7 +299,7 @@ namespace DataPackage_Archive_Manager
                     msg += " since they are system or temporary files";
 
                 ReportMessage(msg + "; nothing to archive");
-                ReportMessage("  Data Package " + dataPkgInfo.ID + " path: " + dataPkg.FullName, BaseLogger.LogLevels.DEBUG);
+                ReportMessage(" Data Package " + dataPkgInfo.ID + " path: " + dataPkg.FullName, BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
