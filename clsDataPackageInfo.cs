@@ -49,7 +49,7 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Example: 894_CPTAC_Batch4_Global_CompRef
         /// </summary>
-        public string FolderName { get; set; }
+        public string DirectoryName { get; set; }
 
         /// <summary>
         /// Example: \\protoapps\DataPkgs\Public\2013\894_CPTAC_Batch4_Global_CompRef
@@ -78,7 +78,7 @@ namespace DataPackage_Archive_Manager
             EUSProposalID = string.Empty;
             InstrumentName = string.Empty;
             Created = DateTime.Now;
-            FolderName = string.Empty;
+            DirectoryName = string.Empty;
             SharePath = string.Empty;
             LocalPath = string.Empty;
         }

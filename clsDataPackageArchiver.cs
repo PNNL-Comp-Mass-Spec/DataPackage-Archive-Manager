@@ -37,7 +37,7 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Since data package uploads always work with the entire data package folder and all subdirectories,
+        /// Since data package uploads always work with the entire data package directory and all subdirectories,
         /// there is a maximum cap on the number of files that will be stored in MyEMSL for a given data package
         /// </para>
         /// <para>
@@ -175,7 +175,7 @@ namespace DataPackage_Archive_Manager
             uploadInfo = new MyEMSLUploadInfo();
             uploadInfo.Clear();
 
-            uploadInfo.SubDir = dataPkgInfo.FolderName;
+            uploadInfo.SubDir = dataPkgInfo.DirectoryName;
 
             // Construct a list of the files on disk for this data package
             var dataPackageFilesAll = dataPkg.GetFiles("*.*", SearchOption.AllDirectories).ToList();
@@ -187,33 +187,33 @@ namespace DataPackage_Archive_Manager
                 return new List<FileInfoObject>();
             }
 
-            // Look for any Auto-process folders that have recently modified files
-            // These folders will be skipped until the files are at least 4 hours old
-            // This list contains folder paths to skip
-            var dataPackageFoldersToSkip = new List<string>();
+            // Look for any Auto-process directories that have recently modified files
+            // These directories will be skipped until the files are at least 4 hours old
+            // This list contains directory paths to skip
+            var dataPackageDirectoriesToSkip = new List<string>();
 
-            var dataPackageFolders = dataPkg.GetDirectories("*", SearchOption.AllDirectories).ToList();
-            var autoJobFolderMatcher = new Regex(@"^[A-Z].{1,5}\d{12,12}_Auto\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var dataPackageDirectories = dataPkg.GetDirectories("*", SearchOption.AllDirectories).ToList();
+            var autoJobDirectoryMatcher = new Regex(@"^[A-Z].{1,5}\d{12,12}_Auto\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-            foreach (var dataPkgFolder in dataPackageFolders)
+            foreach (var dataPkgDirectory in dataPackageDirectories)
             {
-                if (!autoJobFolderMatcher.IsMatch(dataPkgFolder.Name))
+                if (!autoJobDirectoryMatcher.IsMatch(dataPkgDirectory.Name))
                 {
                     continue;
                 }
 
-                var skipFolder = false;
-                foreach (var file in dataPkgFolder.GetFiles("*.*", SearchOption.AllDirectories))
+                var skipDataPkg = false;
+                foreach (var file in dataPkgDirectory.GetFiles("*.*", SearchOption.AllDirectories))
                 {
                     if (DateTime.UtcNow.Subtract(file.LastWriteTimeUtc).TotalHours < 4)
                     {
-                        skipFolder = true;
+                        skipDataPkg = true;
                         break;
                     }
                 }
 
-                if (skipFolder)
-                    dataPackageFoldersToSkip.Add(dataPkgFolder.FullName);
+                if (skipDataPkg)
+                    dataPackageDirectoriesToSkip.Add(dataPkgDirectory.FullName);
             }
 
             // Filter out files that we do not want to archive
@@ -261,9 +261,9 @@ namespace DataPackage_Archive_Manager
                 var dataPkgFileContainer = dataPkgFile.Directory;
                 if (keep && dataPkgFileContainer != null)
                 {
-                    foreach (var dataPkgFolder in dataPackageFoldersToSkip)
+                    foreach (var dataPkgDirectory in dataPackageDirectoriesToSkip)
                     {
-                        if (dataPkgFileContainer.FullName.StartsWith(dataPkgFolder))
+                        if (dataPkgFileContainer.FullName.StartsWith(dataPkgDirectory))
                         {
                             keep = false;
                             break;
@@ -293,8 +293,8 @@ namespace DataPackage_Archive_Manager
                 // Nothing to archive; this is not an error
                 var msg = " Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all have been skipped";
 
-                if (dataPackageFoldersToSkip.Count > 0)
-                    msg += " due to recently modified files in auto-job result folders";
+                if (dataPackageDirectoriesToSkip.Count > 0)
+                    msg += " due to recently modified files in auto-job result directories";
                 else
                     msg += " since they are system or temporary files";
 
@@ -329,7 +329,7 @@ namespace DataPackage_Archive_Manager
 
             foreach (var localFile in dataPackageFiles)
             {
-                // Note: when storing data package files in MyEMSL the SubDir path will always start with the data package folder name
+                // Note: when storing data package files in MyEMSL the SubDir path will always start with the data package directory name
                 var subDir = string.Copy(uploadInfo.SubDir);
 
                 if (localFile.Directory != null && localFile.Directory.FullName.Length > dataPkg.FullName.Length)
@@ -583,7 +583,7 @@ namespace DataPackage_Archive_Manager
                     EUSInstrumentID = row["EUS_Instrument_ID"].CastDBVal<int>(),
                     InstrumentName = row["Instrument"].CastDBVal<string>(),
                     Created = row["Created"].CastDBVal(DateTime.Now),
-                    FolderName = row["Package_File_Folder"].CastDBVal<string>(),
+                    DirectoryName = row["Package_File_Folder"].CastDBVal<string>(),
                     SharePath = row["Share_Path"].CastDBVal<string>(),
                     LocalPath = row["Local_Path"].CastDBVal<string>(),
                     MyEMSLUploads = row["MyEMSL_Uploads"].CastDBVal<int>()
@@ -848,7 +848,7 @@ namespace DataPackage_Archive_Manager
 
                 if (!dataPkg.Exists)
                 {
-                    ReportMessage("Data package folder not found (also tried remote share path): " + dataPkgInfo.LocalPath, BaseLogger.LogLevels.WARN);
+                    ReportMessage("Data package directory not found (also tried remote share path): " + dataPkgInfo.LocalPath, BaseLogger.LogLevels.WARN);
                     return false;
                 }
 
@@ -1476,7 +1476,7 @@ namespace DataPackage_Archive_Manager
 
                 if (!dataPkg.Exists)
                 {
-                    OnErrorEvent("Data package folder not found by VerifyUploadStatusWork, this is unexpected; see: " + dataPkg.FullName);
+                    OnErrorEvent("Data package directory not found by VerifyUploadStatusWork, this is unexpected; see: " + dataPkg.FullName);
 
                     UpdateMyEMSLUploadStatus(statusInfo.Value, verified: false);
 
