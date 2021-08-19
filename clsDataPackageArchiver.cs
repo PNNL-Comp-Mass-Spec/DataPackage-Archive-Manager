@@ -865,7 +865,9 @@ namespace DataPackage_Archive_Manager
                     {
                         if (DateTime.UtcNow.Subtract(metadataFile.LastWriteTimeUtc).TotalDays > 6.5)
                         {
-                            ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file over 6.5 days old; deleting file: " + metadataFile.FullName, true);
+                            ReportError(string.Format(
+                                "Data Package {0} has an existing metadata file over 6.5 days old; deleting file: {1}",
+                                dataPkgInfo.ID , metadataFile.FullName), true);
                             metadataFile.Delete();
                         }
                         else
@@ -880,7 +882,10 @@ namespace DataPackage_Archive_Manager
                     }
                     else
                     {
-                        ReportMessage("Data Package " + dataPkgInfo.ID + " has an existing metadata file less than 48 hours old; skipping this data package", BaseLogger.LogLevels.WARN);
+                        ReportMessage(string.Format(
+                            "Data Package {0} has an existing metadata file less than 48 hours old in {1}; skipping this data package", 
+                            dataPkgInfo.ID, dataPkg.Parent.FullName), BaseLogger.LogLevels.WARN);
+
                         ReportMessage("  " + metadataFile.FullName, BaseLogger.LogLevels.DEBUG);
 
                         // This is not a fatal error; return true
