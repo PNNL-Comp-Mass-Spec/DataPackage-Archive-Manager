@@ -874,7 +874,9 @@ namespace DataPackage_Archive_Manager
                         {
                             // This is likely an error, but we don't want to re-upload the files yet
                             // Log an error to the database
-                            ReportError("Data Package " + dataPkgInfo.ID + " has an existing metadata file between 2 and 6.5 days old: " + metadataFile.FullName, true);
+                            ReportError(string.Format(
+                                "Data Package {0} has an existing metadata file between 2 and 6.5 days old: {1}", 
+                                dataPkgInfo.ID, metadataFile.FullName), true);
 
                             // This is not a fatal error; return true
                             return true;
