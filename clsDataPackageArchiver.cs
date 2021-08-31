@@ -598,11 +598,11 @@ namespace DataPackage_Archive_Manager
         /// <summary>
         /// Parses a list of data package IDs (or ID ranges) separated commas
         /// </summary>
-        /// <param name="dataPkgIDList"></param>
-        /// <returns>List of KeyValue pairs where the key is the start ID and the value is the end ID</returns>
         /// <remarks>
         /// To indicate a range of 300 or higher, use "300-"
         /// In that case, the KeyValuePair will be (300,-1)</remarks>
+        /// <param name="dataPkgIDList"></param>
+        /// <returns>List of KeyValue pairs where the key is the start ID and the value is the end ID</returns>
         public List<KeyValuePair<int, int>> ParseDataPkgIDList(string dataPkgIDList)
         {
             var values = dataPkgIDList.Split(',').ToList();
