@@ -8,15 +8,18 @@ using PRISMDatabaseUtils;
 
 namespace DataPackage_Archive_Manager
 {
-    // This program uploads new/changed data package files to MyEMSL
-    //
-    // -------------------------------------------------------------------------------
-    // Written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
-    //
-    // E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov
-    // Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov
-    // -------------------------------------------------------------------------------
-
+    /// <summary>
+    /// This program uploads new/changed data package files to MyEMSL
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
+    /// </para>
+    /// <para>
+    /// E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov
+    /// Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov
+    /// </para>
+    /// </remarks>
     internal static class Program
     {
         public const string PROGRAM_DATE = "August 31, 2021";
