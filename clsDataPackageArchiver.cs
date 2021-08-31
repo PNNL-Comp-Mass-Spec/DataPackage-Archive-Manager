@@ -875,7 +875,7 @@ namespace DataPackage_Archive_Manager
                             // This is likely an error, but we don't want to re-upload the files yet
                             // Log an error to the database
                             ReportError(string.Format(
-                                "Data Package {0} has an existing metadata file between 2 and 6.5 days old: {1}", 
+                                "Data Package {0} has an existing metadata file between 2 and 6.5 days old: {1}",
                                 dataPkgInfo.ID, metadataFile.FullName), true);
 
                             // This is not a fatal error; return true
@@ -885,7 +885,7 @@ namespace DataPackage_Archive_Manager
                     else
                     {
                         ReportMessage(string.Format(
-                            "Data Package {0} has an existing metadata file less than 48 hours old in {1}; skipping this data package", 
+                            "Data Package {0} has an existing metadata file less than 48 hours old in {1}; skipping this data package",
                             dataPkgInfo.ID, dataPkg.Parent.FullName), BaseLogger.LogLevels.WARN);
 
                         ReportMessage("  " + metadataFile.FullName, BaseLogger.LogLevels.DEBUG);
@@ -1316,9 +1316,9 @@ namespace DataPackage_Archive_Manager
             // First obtain a list of status URIs to check
             // Keys are StatusNum integers, values are StatusURI strings
             const int retryCount = 2;
-            var uRIs = GetStatusURIs(retryCount);
+            var statusURIs = GetStatusURIs(retryCount);
 
-            if (uRIs.Count == 0)
+            if (statusURIs.Count == 0)
             {
                 // Nothing to do
                 return true;
@@ -1327,10 +1327,10 @@ namespace DataPackage_Archive_Manager
             try
             {
                 // Confirm that the data packages are visible in MyEMSL Metadata
-                // To avoid obtaining too many results from MyEMSL, process the data packages in uRIs in groups, 5 at a time
-                // First construct a unique list of the Data Package IDs in uRIs
+                // To avoid obtaining too many results from MyEMSL, process the data packages in statusURIs in groups, 5 at a time
+                // First construct a unique list of the Data Package IDs in statusURIs
 
-                var distinctDataPackageIDs = (from item in uRIs select item.Value.DataPackageID).Distinct().ToList();
+                var distinctDataPackageIDs = (from item in statusURIs select item.Value.DataPackageID).Distinct().ToList();
                 const int DATA_PACKAGE_GROUP_SIZE = 5;
 
                 var statusChecker = new MyEMSLStatusCheck();
@@ -1347,7 +1347,7 @@ namespace DataPackage_Archive_Manager
 
                     RegisterEvents(dataPackageInfoCache);
 
-                    var uRIsInGroup = new Dictionary<int, MyEMSLStatusInfo>();
+                    var statusURIsInGroup = new Dictionary<int, MyEMSLStatusInfo>();
 
                     for (var j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
                     {
@@ -1358,11 +1358,11 @@ namespace DataPackage_Archive_Manager
                         dataPackageInfoCache.AddDataPackage(currentDataPackageID);
 
                         // Find all of the URIs for this data package
-                        var query = from item in uRIs where item.Value.DataPackageID == currentDataPackageID select item;
+                        var query = from item in statusURIs where item.Value.DataPackageID == currentDataPackageID select item;
 
                         foreach (var uriItem in query)
                         {
-                            uRIsInGroup.Add(uriItem.Key, uriItem.Value);
+                            statusURIsInGroup.Add(uriItem.Key, uriItem.Value);
                         }
                     }
 
@@ -1371,7 +1371,7 @@ namespace DataPackage_Archive_Manager
 
                     var exceptionCount = 0;
 
-                    foreach (var statusInfo in uRIsInGroup)
+                    foreach (var statusInfo in statusURIsInGroup)
                     {
                         var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache, ref exceptionCount);
 
