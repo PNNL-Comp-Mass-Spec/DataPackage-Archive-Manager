@@ -17,7 +17,7 @@ namespace DataPackage_Archive_Manager
     /// </para>
     /// <para>
     /// E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov
-    /// Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov
+    /// Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics
     /// </para>
     /// </remarks>
     internal static class Program
@@ -42,7 +42,7 @@ namespace DataPackage_Archive_Manager
                         "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013" +
                         Environment.NewLine +
                         "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
-                        "Website: https://panomics.pnnl.gov/ or https://omics.pnl.gov"
+                        "Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics"
                 };
 
                 var parsed = cmdLineParser.ParseArgs(args, false, false);
