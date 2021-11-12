@@ -22,7 +22,7 @@ namespace DataPackage_Archive_Manager
     /// </remarks>
     internal static class Program
     {
-        public const string PROGRAM_DATE = "August 31, 2021";
+        public const string PROGRAM_DATE = "November 12, 2021";
 
         private static BaseLogger.LogLevels mLogLevel;
 
@@ -34,22 +34,28 @@ namespace DataPackage_Archive_Manager
             {
                 var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
-                var cmdLineParser = new CommandLineParser<CommandLineOptions>(exeName,
+                var parser = new CommandLineParser<CommandLineOptions>(exeName,
                     ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE))
                 {
                     ProgramInfo = "This program uploads new/changed data package files to MyEMSL",
                     ContactInfo =
-                        "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013" +
-                        Environment.NewLine +
+                        "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)" + Environment.NewLine +
                         "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
                         "Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics"
                 };
 
-                var parsed = cmdLineParser.ParseArgs(args, false, false);
-                var options = parsed.ParsedResults;
-                if (!parsed.Success || !options.Validate())
+                var result = parser.ParseArgs(args, false, false);
+                var options = result.ParsedResults;
+
+                if (!result.Success || !options.Validate())
                 {
-                    cmdLineParser.PrintHelp();
+                    if (parser.CreateParamFileProvided)
+                    {
+                        return 0;
+                    }
+
+                    parser.PrintHelp();
+
                     // Delay for 1500 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
                     Thread.Sleep(1500);
                     return -1;
@@ -108,7 +114,7 @@ namespace DataPackage_Archive_Manager
                         {
                             // Data Package IDs not defined
                             ShowErrorMessage("DataPackageIDList was empty; should contain integers or '*'");
-                            cmdLineParser.PrintHelp();
+                            parser.PrintHelp();
                             return -2;
                         }
                     }
