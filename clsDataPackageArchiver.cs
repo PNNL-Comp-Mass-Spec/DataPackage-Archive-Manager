@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MyEMSLReader;
 using Pacifica.Core;
+using Pacifica.DMS_Metadata;
 using Pacifica.Upload;
 using PRISM;
 using PRISM.Logging;
@@ -1038,6 +1039,12 @@ namespace DataPackage_Archive_Manager
 
                         var statusUriMsg = "  myEMSL statusURI => " + uploadInfo.StatusURI;
                         ReportMessage(statusUriMsg, BaseLogger.LogLevels.DEBUG);
+
+                        ReportMessage(string.Format(
+                            "EUS metadata: Instrument ID {0}, Project ID {1}, Uploader ID {2}",
+                            uploadMetadata.EUSInstrumentID,
+                            uploadMetadata.EUSProjectID,
+                            uploadMetadata.EUSOperatorID));   // aka EUSUploaderID or EUSSubmitterID
                     }
                     else
                     {
@@ -1452,6 +1459,17 @@ namespace DataPackage_Archive_Manager
                         {
                             errorMessage = "Ingest failed; unknown reason";
                             ReportError(errorMessage);
+                        }
+
+                        if (errorMessage.Contains("Invalid values for submitter"))
+                        {
+                            ReportError(string.Format(
+                                "Data package owner is not recognized by the MyEMSL system " +
+                                "(or the user has two EUS IDs and MyEMSL only recognizes the first one; see https://dms2.pnl.gov/user/report). " +
+                                "Have user {0} login to {1} then wait 24 hours, " +
+                                "then update table DMS_Data_Package.T_MyEMSL_Uploads to change the ErrorCode to 101 for data package {2}. " +
+                                "You must also delete file MyEMSL_metadata_CaptureJob_{2}.txt from a subdirectory below \\\\protoapps\\dataPkgs\\",
+                                statusInfo.Value.DataPackageOwner, DMSMetadataObject.EUS_PORTAL_URL, statusInfo.Value.DataPackageID));
                         }
 
                         return UploadStatus.VerificationError;
