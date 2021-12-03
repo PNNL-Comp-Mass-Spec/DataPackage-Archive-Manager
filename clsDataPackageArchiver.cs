@@ -56,6 +56,14 @@ namespace DataPackage_Archive_Manager
 
             public string SharePath;
             public string LocalPath;
+
+            /// <summary>
+            /// Show the data package ID and Status URI
+            /// </summary>
+            public override string ToString()
+            {
+                return string.Format("Data package {0}: {1}", DataPackageID, StatusURI ?? string.Empty);
+            }
         }
 
         private struct MyEMSLUploadInfo
@@ -77,6 +85,16 @@ namespace DataPackage_Archive_Manager
                 UploadTimeSeconds = 0;
                 StatusURI = string.Empty;
                 ErrorCode = 0;
+            }
+
+            /// <summary>
+            /// Show file counts
+            /// </summary>
+            public override string ToString()
+            {
+                return string.Format(
+                    "{0} new files, {1} updated files, {2:N0} total bytes",
+                    FileCountNew, FileCountUpdated, Bytes);
             }
         }
 
