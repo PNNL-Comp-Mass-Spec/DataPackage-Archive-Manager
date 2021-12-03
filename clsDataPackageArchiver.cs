@@ -983,7 +983,17 @@ namespace DataPackage_Archive_Manager
                     }
                     else
                     {
-                        uploadMetadata.EUSOperatorID = dataPkgInfo.OwnerEUSID;
+                        // ReSharper disable once StringLiteralTypo
+                        if (dataPkgInfo.OwnerEUSID == 52259 && dataPkgInfo.OwnerPRN.EndsWith("SWEN778", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // This user has two EUS IDs and MyEMSL only recognizes the first one
+                            // Override the EUS ID
+                            uploadMetadata.EUSOperatorID = 45413;
+                        }
+                        else
+                        {
+                            uploadMetadata.EUSOperatorID = dataPkgInfo.OwnerEUSID;
+                        }
                     }
 
                     if (string.IsNullOrWhiteSpace(dataPkgInfo.EUSProposalID))
