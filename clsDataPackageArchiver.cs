@@ -50,6 +50,7 @@ namespace DataPackage_Archive_Manager
         {
             public int EntryID;
             public int DataPackageID;
+            public string DataPackageOwner;
             public DateTime Entered;
             public string StatusURI;
 
@@ -464,7 +465,7 @@ namespace DataPackage_Archive_Manager
             var dateThreshold = DateTime.Now.AddDays(-45);
 
             var sql = string.Format(
-                " SELECT MU.Entry_ID, MU.Data_Package_ID, MU.Entered, MU.StatusNum, MU.Status_URI, DP.Local_Path, DP.Share_Path " +
+                " SELECT MU.Entry_ID, MU.Data_Package_ID, MU.Entered, MU.StatusNum, MU.Status_URI, DP.Local_Path, DP.Share_Path, DP.Owner " +
                 " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.Data_Package_ID = DP.ID" +
                 " WHERE MU.ErrorCode = 0 AND " +
                 "       (MU.Available = 0 Or MU.Verified = 0) AND " +
@@ -502,6 +503,7 @@ namespace DataPackage_Archive_Manager
 
                     statusInfo.SharePath = row["Share_Path"].CastDBVal<string>();
                     statusInfo.LocalPath = row["Local_Path"].CastDBVal<string>();
+                    statusInfo.DataPackageOwner = row["Owner"].CastDBVal<string>();
 
                     statusURIs.Add(statusNum, statusInfo);
                 }
