@@ -1393,9 +1393,9 @@ namespace DataPackage_Archive_Manager
 
                     foreach (var statusInfo in statusURIsInGroup)
                     {
-                        var eResult = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache, ref exceptionCount);
+                        var result = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache, ref exceptionCount);
 
-                        if (eResult == UploadStatus.CriticalError)
+                        if (result == UploadStatus.CriticalError)
                             return false;
                     }
                 }
