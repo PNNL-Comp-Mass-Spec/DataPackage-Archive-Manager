@@ -8,4 +8,4 @@ xcopy Debug\DataPackage_Archive_Manager.exe \\protoapps\DMS_Programs\DataPackage
 xcopy Debug\DataPackage_Archive_Manager.pdb \\protoapps\DMS_Programs\DataPackage_Archive_Manager /D /Y
 xcopy Debug\*.dll \\protoapps\DMS_Programs\DataPackage_Archive_Manager /D /Y
 
-pause
+if not "%1"=="NoPause" pause
