@@ -169,6 +169,75 @@ namespace DataPackage_Archive_Manager
             Initialize();
         }
 
+        private static void AddFileIfArchiveRequired(
+            DirectoryInfo dataPkg,
+            ref MyEMSLUploadInfo uploadInfo,
+            ICollection<FileInfoObject> datasetFilesToArchive,
+            FileInfo localFile,
+            ICollection<DatasetDirectoryOrFileInfo> archiveFiles)
+        {
+            if (archiveFiles.Count == 0)
+            {
+                // File not found; add to datasetFilesToArchive
+                if (dataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+
+                datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
+                uploadInfo.FileCountNew++;
+                uploadInfo.Bytes += localFile.Length;
+                return;
+            }
+
+            var archiveFile = archiveFiles.First();
+
+            // File already in MyEMSL
+            // Do not re-upload if it was stored in MyEMSL less than 6.75 days ago
+            if (DateTime.UtcNow.Subtract(archiveFile.FileInfo.SubmissionTimeValue).TotalDays < 6.75)
+            {
+                return;
+            }
+
+            // Compare file size
+            if (localFile.Length != archiveFile.FileInfo.FileSizeBytes)
+            {
+                // Sizes don't match; add to datasetFilesToArchive
+                if (dataPkg.Parent == null)
+                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+
+                datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
+                uploadInfo.FileCountUpdated++;
+                uploadInfo.Bytes += localFile.Length;
+                return;
+            }
+
+            // File sizes match
+            // Compare SHA-1 hash if the file is less than 1 month old or
+            // if the file is less than 6 months old and less than 50 MB in size
+
+            const int THRESHOLD_50_MB = 50 * 1024 * 1024;
+
+            if (localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
+                localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && localFile.Length < THRESHOLD_50_MB)
+            {
+                var sha1HashHex = Utilities.GenerateSha1Hash(localFile);
+
+                if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
+                {
+                    if (dataPkg.Parent == null)
+                        throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+
+                    // Hashes don't match; add to datasetFilesToArchive
+                    // We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
+                    var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(localFile.DirectoryName,
+                                                                                           dataPkg.Parent.FullName);
+
+                    datasetFilesToArchive.Add(new FileInfoObject(localFile, relativeDestinationDirectory, sha1HashHex));
+                    uploadInfo.FileCountUpdated++;
+                    uploadInfo.Bytes += localFile.Length;
+                }
+            }
+        }
+
         private short BoolToTinyInt(bool value)
         {
             return (short)(value ? 1 : 0);
@@ -395,75 +464,6 @@ namespace DataPackage_Archive_Manager
             }
 
             return datasetFilesToArchive;
-        }
-
-        private static void AddFileIfArchiveRequired(
-            DirectoryInfo dataPkg,
-            ref MyEMSLUploadInfo uploadInfo,
-            ICollection<FileInfoObject> datasetFilesToArchive,
-            FileInfo localFile,
-            ICollection<DatasetDirectoryOrFileInfo> archiveFiles)
-        {
-            if (archiveFiles.Count == 0)
-            {
-                // File not found; add to datasetFilesToArchive
-                if (dataPkg.Parent == null)
-                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
-
-                datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
-                uploadInfo.FileCountNew++;
-                uploadInfo.Bytes += localFile.Length;
-                return;
-            }
-
-            var archiveFile = archiveFiles.First();
-
-            // File already in MyEMSL
-            // Do not re-upload if it was stored in MyEMSL less than 6.75 days ago
-            if (DateTime.UtcNow.Subtract(archiveFile.FileInfo.SubmissionTimeValue).TotalDays < 6.75)
-            {
-                return;
-            }
-
-            // Compare file size
-            if (localFile.Length != archiveFile.FileInfo.FileSizeBytes)
-            {
-                // Sizes don't match; add to datasetFilesToArchive
-                if (dataPkg.Parent == null)
-                    throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
-
-                datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
-                uploadInfo.FileCountUpdated++;
-                uploadInfo.Bytes += localFile.Length;
-                return;
-            }
-
-            // File sizes match
-            // Compare SHA-1 hash if the file is less than 1 month old or
-            // if the file is less than 6 months old and less than 50 MB in size
-
-            const int THRESHOLD_50_MB = 50 * 1024 * 1024;
-
-            if (localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
-                localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && localFile.Length < THRESHOLD_50_MB)
-            {
-                var sha1HashHex = Utilities.GenerateSha1Hash(localFile);
-
-                if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
-                {
-                    if (dataPkg.Parent == null)
-                        throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
-
-                    // Hashes don't match; add to datasetFilesToArchive
-                    // We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
-                    var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(localFile.DirectoryName,
-                                                                                           dataPkg.Parent.FullName);
-
-                    datasetFilesToArchive.Add(new FileInfoObject(localFile, relativeDestinationDirectory, sha1HashHex));
-                    uploadInfo.FileCountUpdated++;
-                    uploadInfo.Bytes += localFile.Length;
-                }
-            }
         }
 
         private IEnumerable<DataPackageInfo> GetFilteredDataPackageInfoList(
