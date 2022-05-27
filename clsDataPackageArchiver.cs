@@ -252,6 +252,24 @@ namespace DataPackage_Archive_Manager
             return !dataPkg.Exists ? 0 : dataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
         }
 
+        private bool FilePassesFilters(ICollection<string> filesToSkip, ICollection<string> extensionsToSkip, FileInfo dataPkgFile)
+        {
+
+            if (filesToSkip.Contains(dataPkgFile.Name))
+                return false;
+
+            if (extensionsToSkip.Contains(dataPkgFile.Extension))
+                return false;
+
+            if (dataPkgFile.Name.StartsWith("~$") && ((dataPkgFile.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden))
+                return false;
+
+            if (dataPkgFile.Name.StartsWith("SyncToy_") && dataPkgFile.Name.EndsWith(".dat"))
+                return false;
+
+            return !dataPkgFile.Name.EndsWith(".mzml.gz", StringComparison.OrdinalIgnoreCase);
+        }
+
         private List<FileInfoObject> FindDataPackageFilesToArchive(
             DataPackageInfo dataPkgInfo,
             DirectoryInfo dataPkg,
@@ -322,30 +340,11 @@ namespace DataPackage_Archive_Manager
             };
 
             var dataPackageFiles = new List<FileInfo>();
+
             foreach (var dataPkgFile in dataPackageFilesAll)
             {
-                var keep = true;
-                if (filesToSkip.Contains(dataPkgFile.Name))
-                {
-                    keep = false;
-                }
-                else if (extensionsToSkip.Contains(dataPkgFile.Extension))
-                {
-                    keep = false;
-                }
-                else if (dataPkgFile.Name.StartsWith("~$"))
-                {
-                    if ((dataPkgFile.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden)
-                        keep = false;
-                }
-                else if (dataPkgFile.Name.StartsWith("SyncToy_") && dataPkgFile.Name.EndsWith(".dat"))
-                {
-                    keep = false;
-                }
-                else if (dataPkgFile.Name.EndsWith(".mzml.gz", StringComparison.OrdinalIgnoreCase))
-                {
-                    keep = false;
-                }
+                if (!FilePassesFilters(filesToSkip, extensionsToSkip, dataPkgFile))
+                    continue;
 
                 var dataPkgFileContainer = dataPkgFile.Directory;
                 if (keep && dataPkgFileContainer != null)
