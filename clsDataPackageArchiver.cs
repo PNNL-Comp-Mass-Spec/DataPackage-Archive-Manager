@@ -464,12 +464,9 @@ namespace DataPackage_Archive_Manager
             IEnumerable<DataPackageInfo> dataPkgInfo,
             IEnumerable<int> dataPkgGroup)
         {
-            var filteredDataPkgInfo =
-                (from item in dataPkgInfo
-                 join dataPkgID in dataPkgGroup on item.ID equals dataPkgID
-                 select item).ToList();
-
-            return filteredDataPkgInfo;
+            return (from item in dataPkgInfo
+                    join dataPkgID in dataPkgGroup on item.ID equals dataPkgID
+                    select item).ToList();
         }
 
         private Dictionary<int, MyEMSLStatusInfo> GetStatusURIs(int retryCount)
