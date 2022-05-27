@@ -254,6 +254,8 @@ namespace DataPackage_Archive_Manager
 
         private bool FilePassesFilters(ICollection<string> filesToSkip, ICollection<string> extensionsToSkip, FileInfo dataPkgFile)
         {
+            if (dataPkgFile.Length == 0)
+                return false;
 
             if (filesToSkip.Contains(dataPkgFile.Name))
                 return false;
