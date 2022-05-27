@@ -348,23 +348,16 @@ namespace DataPackage_Archive_Manager
                 if (!FilePassesFilters(filesToSkip, extensionsToSkip, dataPkgFile))
                     continue;
 
-                var dataPkgFileContainer = dataPkgFile.Directory;
-                if (keep && dataPkgFileContainer != null)
+                if (dataPkgFile.Directory != null)
                 {
-                    foreach (var dataPkgDirectory in dataPackageDirectoriesToSkip)
-                    {
-                        if (dataPkgFileContainer.FullName.StartsWith(dataPkgDirectory))
-                        {
-                            keep = false;
-                            break;
-                        }
-                    }
+                    // Skip the file if it is in one of the directories in dataPackageDirectoriesToSkip
+                    var keep = dataPackageDirectoriesToSkip.All(dataPkgDirectory => !dataPkgFile.Directory.FullName.StartsWith(dataPkgDirectory));
+
+                    if (!keep)
+                        continue;
                 }
 
-                if (keep)
-                {
-                    dataPackageFiles.Add(dataPkgFile);
-                }
+                dataPackageFiles.Add(dataPkgFile);
             }
 
             if (dataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
