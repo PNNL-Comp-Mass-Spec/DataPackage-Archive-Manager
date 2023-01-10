@@ -476,7 +476,7 @@ namespace DataPackage_Archive_Manager
 
             var sql = string.Format(
                 " SELECT MU.entry_id, MU.data_package_id, MU.entered, MU.status_num, MU.status_uri, DP.local_path, DP.share_path, DP.owner " +
-                " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.data_package_id = DP.ID" +
+                " FROM V_MyEMSL_Data_Package_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.data_package_id = DP.ID" +
                 " WHERE MU.error_code = 0 AND " +
                 "       (MU.available = 0 Or MU.verified = 0) AND " +
                 "       Coalesce(MU.status_num, 0) > 0 AND" +
