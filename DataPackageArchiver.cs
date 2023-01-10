@@ -475,11 +475,11 @@ namespace DataPackage_Archive_Manager
             var dateThreshold = DateTime.Now.AddDays(-45);
 
             var sql = string.Format(
-                " SELECT MU.Entry_ID, MU.Data_Package_ID, MU.Entered, MU.Status_Num, MU.Status_URI, DP.Local_Path, DP.Share_Path, DP.Owner " +
-                " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.Data_Package_ID = DP.ID" +
-                " WHERE MU.Error_Code = 0 AND " +
-                "       (MU.Available = 0 Or MU.Verified = 0) AND " +
-                "       ISNULL(MU.Status_Num, 0) > 0 AND" +
+                " SELECT MU.entry_id, MU.data_package_id, MU.entered, MU.status_num, MU.status_uri, DP.local_path, DP.share_path, DP.owner " +
+                " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.data_package_id = DP.ID" +
+                " WHERE MU.error_code = 0 AND " +
+                "       (MU.available = 0 Or MU.verified = 0) AND " +
+                "       ISNULL(MU.status_num, 0) > 0 AND" +
                 "       Entered >= '{0:yyyy-MM-dd}'",
                 dateThreshold);
 
@@ -501,7 +501,7 @@ namespace DataPackage_Archive_Manager
 
                 if (statusURIs.ContainsKey(statusNum))
                 {
-                    var msg = "Error, Status_Num " + statusNum + " is defined for multiple data packages";
+                    var msg = "Error, status_num " + statusNum + " is defined for multiple data packages";
                     ReportError(msg, true);
                     continue;
                 }
@@ -511,9 +511,9 @@ namespace DataPackage_Archive_Manager
                 {
                     statusInfo.StatusURI = statusURI;
 
-                    statusInfo.SharePath = row["Share_Path"].CastDBVal<string>();
-                    statusInfo.LocalPath = row["Local_Path"].CastDBVal<string>();
-                    statusInfo.DataPackageOwner = row["Owner"].CastDBVal<string>();
+                    statusInfo.SharePath = row["share_path"].CastDBVal<string>();
+                    statusInfo.LocalPath = row["local_path"].CastDBVal<string>();
+                    statusInfo.DataPackageOwner = row["owner"].CastDBVal<string>();
 
                     statusURIs.Add(statusNum, statusInfo);
                 }
@@ -544,9 +544,9 @@ namespace DataPackage_Archive_Manager
             var dataPkgInfo = new List<DataPackageInfo>();
             var sql = new StringBuilder();
 
-            sql.Append(" SELECT ID, Name, Owner, Instrument, " +
-                       " EUS_Person_ID, EUS_Proposal_ID, EUS_Instrument_ID, Created, " +
-                       " Package_File_Folder, Share_Path, Local_Path, MyEMSL_Uploads " +
+            sql.Append(" SELECT id, name, owner, instrument, " +
+                       " eus_person_id, eus_proposal_id, eus_instrument_id, created, " +
+                       " package_file_folder, share_path, local_path, myemsl_uploads " +
                        " FROM V_Data_Package_Export");
 
             if (dataPkgIDs.Count > 0)
@@ -562,20 +562,20 @@ namespace DataPackage_Archive_Manager
 
                     if (dataPkgIDs[i].Key == dataPkgIDs[i].Value)
                     {
-                        sql.AppendFormat("ID = {0}", dataPkgIDs[i].Key);
+                        sql.AppendFormat("id = {0}", dataPkgIDs[i].Key);
                     }
                     else if (dataPkgIDs[i].Value < 0)
                     {
-                        sql.AppendFormat("ID >= {0}", dataPkgIDs[i].Key);
+                        sql.AppendFormat("id >= {0}", dataPkgIDs[i].Key);
                     }
                     else
                     {
-                        sql.AppendFormat("ID BETWEEN {0} AND {1}", dataPkgIDs[i].Key, dataPkgIDs[i].Value);
+                        sql.AppendFormat("id BETWEEN {0} AND {1}", dataPkgIDs[i].Key, dataPkgIDs[i].Value);
                     }
                 }
             }
 
-            sql.Append(" ORDER BY ID");
+            sql.Append(" ORDER BY id");
 
             var success = mDBTools.GetQueryResultsDataTable(sql.ToString(), out var table, retryCount: 1);
 
@@ -588,17 +588,17 @@ namespace DataPackage_Archive_Manager
 
                 var dataPkg = new DataPackageInfo(dataPkgID)
                 {
-                    Name = row["Name"].CastDBVal<string>(),
-                    OwnerPRN = row["Owner"].CastDBVal<string>(),
-                    OwnerEUSID = row["EUS_Person_ID"].CastDBVal<int>(),
-                    EUSProposalID = row["EUS_Proposal_ID"].CastDBVal<string>(),
-                    EUSInstrumentID = row["EUS_Instrument_ID"].CastDBVal<int>(),
-                    InstrumentName = row["Instrument"].CastDBVal<string>(),
-                    Created = row["Created"].CastDBVal(DateTime.Now),
-                    DirectoryName = row["Package_File_Folder"].CastDBVal<string>(),
-                    SharePath = row["Share_Path"].CastDBVal<string>(),
-                    LocalPath = row["Local_Path"].CastDBVal<string>(),
-                    MyEMSLUploads = row["MyEMSL_Uploads"].CastDBVal<int>()
+                    Name = row["name"].CastDBVal<string>(),
+                    OwnerPRN = row["owner"].CastDBVal<string>(),
+                    OwnerEUSID = row["eus_person_id"].CastDBVal<int>(),
+                    EUSProposalID = row["eus_proposal_id"].CastDBVal<string>(),
+                    EUSInstrumentID = row["eus_instrument_id"].CastDBVal<int>(),
+                    InstrumentName = row["instrument"].CastDBVal<string>(),
+                    Created = row["created"].CastDBVal(DateTime.Now),
+                    DirectoryName = row["package_file_folder"].CastDBVal<string>(),
+                    SharePath = row["share_path"].CastDBVal<string>(),
+                    LocalPath = row["Local_path"].CastDBVal<string>(),
+                    MyEMSLUploads = row["myemsl_uploads"].CastDBVal<int>()
                 };
 
                 dataPkgInfo.Add(dataPkg);
