@@ -479,7 +479,7 @@ namespace DataPackage_Archive_Manager
                 " FROM V_MyEMSL_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.data_package_id = DP.ID" +
                 " WHERE MU.error_code = 0 AND " +
                 "       (MU.available = 0 Or MU.verified = 0) AND " +
-                "       ISNULL(MU.status_num, 0) > 0 AND" +
+                "       Coalesce(MU.status_num, 0) > 0 AND" +
                 "       Entered >= '{0:yyyy-MM-dd}'",
                 dateThreshold);
 
