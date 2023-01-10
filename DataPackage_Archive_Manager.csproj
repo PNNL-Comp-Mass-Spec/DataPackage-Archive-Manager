@@ -55,9 +55,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="clsDataPackageInfo.cs" />
-    <Compile Include="clsDataPackageArchiver.cs" />
     <Compile Include="CommandLineOptions.cs" />
+    <Compile Include="DataPackageArchiver.cs" />
+    <Compile Include="DataPackageInfo.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
