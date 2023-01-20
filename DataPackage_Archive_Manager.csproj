@@ -34,19 +34,11 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MyEMSLReader, Version=1.3.6397.29339, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="MyEMSLReader">
       <HintPath>Lib\MyEMSLReader.dll</HintPath>
     </Reference>
-    <Reference Include="Pacifica.Core, Version=2.0.6404.31768, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Lib\Pacifica.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Pacifica.DMS_Metadata">
-      <HintPath>Lib\Pacifica.DMS_Metadata.dll</HintPath>
-    </Reference>
-    <Reference Include="Pacifica.Upload">
-      <HintPath>Lib\Pacifica.Upload.dll</HintPath>
+    <Reference Include="Pacifica">
+      <HintPath>Lib\Pacifica.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -66,8 +58,8 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="jayrock-json">
-      <Version>0.9.16530.1</Version>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>13.0.2</Version>
     </PackageReference>
     <PackageReference Include="PRISM-DatabaseUtils">
       <Version>1.3.6</Version>

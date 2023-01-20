@@ -8,12 +8,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MyEMSLReader;
 using Pacifica.Core;
-using Pacifica.DMS_Metadata;
-using Pacifica.Upload;
+using Pacifica.DataUpload;
+using Pacifica.DMSDataUpload;
 using PRISM;
 using PRISM.Logging;
 using PRISMDatabaseUtils;
-using Utilities = Pacifica.Core.Utilities;
 
 namespace DataPackage_Archive_Manager
 {
@@ -1444,41 +1443,35 @@ namespace DataPackage_Archive_Manager
                     return UploadStatus.VerificationError;
                 }
 
-                if (serverResponse.Keys.Count == 0)
+                if (!serverResponse.Valid)
                 {
-                    ReportError("Empty JSON server response for " + dataPackageAndEntryId);
+                    ReportError("Empty JSON server response for " + dataPackageAndEntryId + ", or bad data; see " + statusInfo.Value.StatusURI);
                     return UploadStatus.VerificationError;
                 }
 
-                if (serverResponse.TryGetValue("state", out var ingestState))
+                var ingestState = serverResponse.State;
+
+                if (string.Equals((string)ingestState, "failed", StringComparison.InvariantCultureIgnoreCase) ||
+                    !string.IsNullOrWhiteSpace(errorMessage))
                 {
-                    if (string.Equals((string)ingestState, "failed", StringComparison.InvariantCultureIgnoreCase) ||
-                        !string.IsNullOrWhiteSpace(errorMessage))
+                    // Error should have already been logged during the call to GetIngestStatus
+                    if (string.IsNullOrWhiteSpace(errorMessage))
                     {
-                        // Error should have already been logged during the call to GetIngestStatus
-                        if (string.IsNullOrWhiteSpace(errorMessage))
-                        {
-                            errorMessage = "Ingest failed; unknown reason";
-                            ReportError(errorMessage);
-                        }
-
-                        if (errorMessage.Contains("Invalid values for submitter"))
-                        {
-                            ReportError(string.Format(
-                                "Data package owner is not recognized by the MyEMSL system " +
-                                "(or the user has two EUS IDs and MyEMSL only recognizes the first one; see https://dms2.pnl.gov/user/report). " +
-                                "Have user {0} login to {1} then wait 24 hours, " +
-                                "then update table DMS_Data_Package.T_MyEMSL_Uploads to change the ErrorCode to 101 for data package {2}. " +
-                                "You must also delete file MyEMSL_metadata_CaptureJob_{2}.txt from a subdirectory below \\\\protoapps\\dataPkgs\\",
-                                statusInfo.Value.DataPackageOwner, DMSMetadataObject.EUS_PORTAL_URL, statusInfo.Value.DataPackageID));
-                        }
-
-                        return UploadStatus.VerificationError;
+                        errorMessage = "Ingest failed; unknown reason";
+                        ReportError(errorMessage);
                     }
-                }
-                else
-                {
-                    ReportError("State parameter not found in ingest status; see " + statusInfo.Value.StatusURI);
+
+                    if (errorMessage.Contains("Invalid values for submitter"))
+                    {
+                        ReportError(string.Format(
+                            "Data package owner is not recognized by the MyEMSL system " +
+                            "(or the user has two EUS IDs and MyEMSL only recognizes the first one; see https://dms2.pnl.gov/user/report). " +
+                            "Have user {0} login to {1} then wait 24 hours, " +
+                            "then update table DMS_Data_Package.T_MyEMSL_Uploads to change the ErrorCode to 101 for data package {2}. " +
+                            "You must also delete file MyEMSL_metadata_CaptureJob_{2}.txt from a subdirectory below \\\\protoapps\\dataPkgs\\",
+                            statusInfo.Value.DataPackageOwner, DMSMetadataObject.EUS_PORTAL_URL, statusInfo.Value.DataPackageID));
+                    }
+
                     return UploadStatus.VerificationError;
                 }
 
