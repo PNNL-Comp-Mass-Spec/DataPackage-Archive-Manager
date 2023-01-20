@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using PRISM;
-using PRISM.FileProcessor;
 using PRISM.Logging;
 using PRISMDatabaseUtils;
 
@@ -35,7 +34,7 @@ namespace DataPackage_Archive_Manager
                 var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
                 var parser = new CommandLineParser<CommandLineOptions>(exeName,
-                    ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE))
+                    AppUtils.GetAppVersion(PROGRAM_DATE))
                 {
                     ProgramInfo = "This program uploads new/changed data package files to MyEMSL",
                     ContactInfo =
