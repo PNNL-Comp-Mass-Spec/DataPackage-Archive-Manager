@@ -21,7 +21,12 @@ namespace DataPackage_Archive_Manager
     /// </remarks>
     internal static class Program
     {
-        public const string PROGRAM_DATE = "January 10, 2023";
+        public static readonly string ProgramDate;
+
+        static Program()
+        {
+            ProgramDate = ThisAssembly.GitCommitDate.ToLocalTime().ToString("MMMM dd, yyyy");
+        }
 
         private static BaseLogger.LogLevels mLogLevel;
 
@@ -34,7 +39,7 @@ namespace DataPackage_Archive_Manager
                 var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
                 var parser = new CommandLineParser<CommandLineOptions>(exeName,
-                    AppUtils.GetAppVersion(PROGRAM_DATE))
+                    AppUtils.GetAppVersion(ProgramDate))
                 {
                     ProgramInfo = "This program uploads new/changed data package files to MyEMSL",
                     ContactInfo =

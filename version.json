@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "version": "1.1",
+  "assemblyVersion": {
+    "precision": "build"
+  },
+  "pathFilters": [
+    ":/", // Consider all committed file changes in the repo root folder for version increases
+    ":^/README.md", // Exclude changes to README.md
+    ":^/RevisionHistory.txt", // Exclude changes to RevisionHistory.txt
+    ":^/DataPackage_Archive_Manager.sln.DotSettings", // Exclude changes to DataPackage_Archive_Manager.sln.DotSettings
+    ":^/.gitignore" // Exclude changes to .gitignore
+  ],
+  "publicReleaseRefSpec": [
+    "^refs/heads/master$" // we release out of master
+  ]
+}
