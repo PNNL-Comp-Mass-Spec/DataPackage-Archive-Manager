@@ -22,8 +22,8 @@ namespace DataPackage_Archive_Manager
 
         public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;";
 
-        private const string SP_NAME_STORE_MYEMSL_STATS = "StoreMyEMSLUploadStats";
-        private const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "SetMyEMSLUploadStatus";
+        private const string SP_NAME_STORE_MYEMSL_STATS = "store_myemsl_upload_stats";
+        private const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "set_myemsl_upload_status";
 
         private enum UploadStatus
         {
