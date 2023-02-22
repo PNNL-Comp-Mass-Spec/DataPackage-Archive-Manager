@@ -5,10 +5,10 @@ namespace DataPackage_Archive_Manager
 {
     internal class CommandLineOptions
     {
-        [Option("IDs", ArgPosition = 1, Required = true, HelpShowsDefault = false, HelpText = "Data package ID list; can be a single Data package ID, a comma-separated list of IDs, or * to process all Data Packages. Items in DataPackageIDList can be ID ranges, for example 880-885 or even 892-")]
+        [Option("IDs", ArgPosition = 1, Required = true, HelpShowsDefault = false, HelpText = "Data package ID list; can be a single data package ID, a comma-separated list of IDs, or * to process all Data Packages. Items in the ID list can be ID ranges, for example 880-885 or even 892-")]
         public string PackageIds { get; set; }
 
-        [Option("Date", "D", HelpText = "Date threshold for finding modified data packages; if a data package does not have any files modified on/after this date, then the data package will not be uploaded to MyEMSL")]
+        [Option("Date", "D", HelpText = "Date threshold for finding modified data packages; if a data package does not have any files modified on/after this date, the data package will not be uploaded to MyEMSL")]
         public string DateThresholdString { get; set; }
 
         [Option("Preview", HelpText = "Preview any files that would be uploaded")]

@@ -1588,7 +1588,7 @@ namespace DataPackage_Archive_Manager
             var msg = "Upload complete";
 
             // Note that e.ServerResponse will simply have the StatusURL if the upload succeeded
-            // If a problem occurred, then e.ServerResponse will either have the full server response, or may even be blank
+            // If a problem occurred, e.ServerResponse will either have the full server response, or may even be blank
             if (string.IsNullOrEmpty(e.ServerResponse))
                 msg += ": empty server response";
             else
