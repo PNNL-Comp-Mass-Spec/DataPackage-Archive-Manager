@@ -187,54 +187,83 @@ namespace DataPackage_Archive_Manager
                 return;
             }
 
-            var archiveFile = archiveFiles.First();
+            // The file is already in MyEMSL
 
-            // File already in MyEMSL
-            // Do not re-upload if it was stored in MyEMSL less than 6.75 days ago
-            if (DateTime.UtcNow.Subtract(archiveFile.FileInfo.SubmissionTimeValue).TotalDays < 6.75)
-            {
-                return;
-            }
+            var matchCount = 0;
+            var mismatchCount = 0;
+            var sha1HashHex = string.Empty;
 
-            // Compare file size
-            if (localFile.Length != archiveFile.FileInfo.FileSizeBytes)
+            foreach (var archiveFile in archiveFiles)
             {
-                // Sizes don't match; add to datasetFilesToArchive
+                // Do not re-upload if the file was stored in MyEMSL less than 6.75 days ago
+                if (DateTime.UtcNow.Subtract(archiveFile.FileInfo.SubmissionTimeValue).TotalDays < 6.75)
+                {
+                    return;
+                }
+
+                // Compare file size
+                if (localFile.Length != archiveFile.FileInfo.FileSizeBytes)
+                {
+                    // Sizes don't match
+                    mismatchCount++;
+                    continue;
+                }
+
+                // File sizes match
+                // Compare SHA-1 hash if the file is less than 1 month old or
+                // if the file is less than 6 months old and less than 50 MB in size
+
+                const int THRESHOLD_50_MB = 50 * 1024 * 1024;
+
+                if (localFile.LastWriteTimeUtc <= DateTime.UtcNow.AddMonths(-1) &&
+                    (localFile.LastWriteTimeUtc <= DateTime.UtcNow.AddMonths(-6) || localFile.Length >= THRESHOLD_50_MB))
+                {
+                    // Old file, or a large file less than 6 months old
+                    // Assume the files match (since the same length)
+                    // Continue iterating over other versions of this file, in case another one is newer and has a matching SHA-1 hash
+                    matchCount++;
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(sha1HashHex))
+                {
+                    sha1HashHex = Utilities.GenerateSha1Hash(localFile);
+                }
+
+                if (sha1HashHex == archiveFile.FileInfo.Sha1Hash)
+                {
+                    // Files match
+                    return;
+                }
+
                 if (dataPkg.Parent == null)
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
-                datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
-                uploadInfo.FileCountUpdated++;
-                uploadInfo.Bytes += localFile.Length;
+                // Hashes don't match
+                mismatchCount++;
+            }
+
+            if (matchCount > 0 || mismatchCount == 0)
                 return;
-            }
 
-            // File sizes match
-            // Compare SHA-1 hash if the file is less than 1 month old or
-            // if the file is less than 6 months old and less than 50 MB in size
+            if (dataPkg.Parent == null)
+                throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
 
-            const int THRESHOLD_50_MB = 50 * 1024 * 1024;
-
-            if (localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-1) ||
-                localFile.LastWriteTimeUtc > DateTime.UtcNow.AddMonths(-6) && localFile.Length < THRESHOLD_50_MB)
+            if (string.IsNullOrEmpty(sha1HashHex))
             {
-                var sha1HashHex = Utilities.GenerateSha1Hash(localFile);
-
-                if (sha1HashHex != archiveFile.FileInfo.Sha1Hash)
-                {
-                    if (dataPkg.Parent == null)
-                        throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
-
-                    // Hashes don't match; add to datasetFilesToArchive
-                    // We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
-                    var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(localFile.DirectoryName,
-                                                                                           dataPkg.Parent.FullName);
-
-                    datasetFilesToArchive.Add(new FileInfoObject(localFile, relativeDestinationDirectory, sha1HashHex));
-                    uploadInfo.FileCountUpdated++;
-                    uploadInfo.Bytes += localFile.Length;
-                }
+                datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
             }
+            else
+            {
+                // We include the hash when instantiating the new FileInfoObject so that the hash will not need to be regenerated later
+                var relativeDestinationDirectory = FileInfoObject.GenerateRelativePath(localFile.DirectoryName,
+                    dataPkg.Parent.FullName);
+
+                datasetFilesToArchive.Add(new FileInfoObject(localFile, relativeDestinationDirectory, sha1HashHex));
+            }
+
+            uploadInfo.FileCountUpdated++;
+            uploadInfo.Bytes += localFile.Length;
         }
 
         private short BoolToTinyInt(bool value)
@@ -757,6 +786,7 @@ namespace DataPackage_Archive_Manager
 
                     var dataPackageInfoCache = new DataPackageListInfo
                     {
+                        IncludeAllRevisions = true,
                         ReportMetadataURLs = TraceMode || LogLevel == BaseLogger.LogLevels.DEBUG,
                         ThrowErrors = true,
                         TraceMode = TraceMode
@@ -870,6 +900,7 @@ namespace DataPackage_Archive_Manager
                 // For example, \\protoapps\DataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
                 var metadataFilePath = Path.Combine(dataPkg.Parent.FullName, Utilities.GetMetadataFilenameForJob(dataPkgInfo.ID.ToString(CultureInfo.InvariantCulture)));
                 var metadataFile = new FileInfo(metadataFilePath);
+
                 if (metadataFile.Exists)
                 {
                     if (DateTime.UtcNow.Subtract(metadataFile.LastWriteTimeUtc).TotalHours >= 48)
@@ -923,6 +954,7 @@ namespace DataPackage_Archive_Manager
                 // Check whether the MyEMSL Metadata query returned results
                 // If it did not, either this is a new data package, or we had a query error
                 var archiveFileCountExisting = dataPackageInfoCache.FindFiles("*", "", dataPkgInfo.ID).Count;
+
                 if (archiveFileCountExisting == 0)
                 {
                     // Data package not in MyEMSL (or the files reported by it were filtered out by the reader)
