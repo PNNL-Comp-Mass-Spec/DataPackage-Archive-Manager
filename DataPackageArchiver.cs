@@ -1512,8 +1512,10 @@ namespace DataPackage_Archive_Manager
                     if (DateTime.Now.Subtract(statusInfo.Value.Entered).TotalHours > 24)
                     {
                         ReportError(
-                        "Data package " + statusInfo.Value.DataPackageID + " is not available in MyEMSL after 24 hours; see " +
-                        statusInfo.Value.StatusURI, true);
+                        string.Format(
+                            "Data package {0} is not available in MyEMSL after 24 hours (% complete is < 100, current task is {1}). " +
+                            "To ignore this upload, set ErrorCode to 101 in table DMS_Data_Package table T_MyEMSL_Uploads\r\n; see {2}",
+                            statusInfo.Value.DataPackageID, serverResponse.CurrentTask, statusInfo.Value.StatusURI), true);
                     }
 
                     // Even though it is not yet available, we report Success
