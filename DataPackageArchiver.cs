@@ -450,7 +450,7 @@ namespace DataPackage_Archive_Manager
                 }
 
                 // Look for this file in MyEMSL
-                var archiveFiles = dataPackageInfoCache.FindFiles(localFile.Name, subDir, dataPkgInfo.ID, recurse: false);
+                var archiveFiles = dataPackageInfoCache.FindFiles(localFile.Name, subDir, dataPkgInfo.ID, string.Empty, recurse: false);
 
                 if (dataPkg.Parent == null)
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
