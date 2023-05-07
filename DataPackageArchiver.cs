@@ -1181,7 +1181,10 @@ namespace DataPackage_Archive_Manager
                 // Setup for execution of the stored procedure
                 var cmd = mDBTools.CreateCommand(SP_NAME_STORE_MYEMSL_STATS, CommandType.StoredProcedure);
 
-                mDBTools.AddParameter(cmd, "@Return", SqlType.Int, ParameterDirection.ReturnValue);
+                // Define parameter for procedure's return value
+                // If querying a Postgres DB, mDBTools will auto-change "@return" to "_returnCode"
+                var returnParam = mDBTools.AddParameter(cmd, "@Return", SqlType.Int, ParameterDirection.ReturnValue);
+
                 mDBTools.AddParameter(cmd, "@DataPackageID", SqlType.Int).Value = Convert.ToInt32(dataPkgInfo.ID);
                 mDBTools.AddParameter(cmd, "@Subfolder", SqlType.VarChar, 128, uploadInfo.SubDir);
                 mDBTools.AddParameter(cmd, "@FileCountNew", SqlType.Int).Value = uploadInfo.FileCountNew;
@@ -1195,15 +1198,18 @@ namespace DataPackage_Archive_Manager
 
                 // Execute the SP (retry the call up to 4 times)
                 cmd.CommandTimeout = 20;
-                var resCode = mDBTools.ExecuteSP(cmd, 4);
+                mDBTools.ExecuteSP(cmd, 4);
 
-                if (resCode == 0)
+                var returnCode = DBToolsBase.GetReturnCode(returnParam);
+
+                if (returnCode == 0)
                 {
                     return true;
                 }
 
-                var msg = "Error " + resCode + " storing MyEMSL Upload Stats";
+                var msg = string.Format("Error {0} storing MyEMSL Upload Stats using {1}", returnCode, SP_NAME_STORE_MYEMSL_STATS);
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg);
+
                 return false;
             }
             catch (Exception ex)
@@ -1226,7 +1232,10 @@ namespace DataPackage_Archive_Manager
             {
                 var cmd = mDBTools.CreateCommand(SP_NAME_SET_MYEMSL_UPLOAD_STATUS, CommandType.StoredProcedure);
 
-                mDBTools.AddParameter(cmd, "@Return", SqlType.Int, ParameterDirection.ReturnValue);
+                // Define parameter for procedure's return value
+                // If querying a Postgres DB, mDBTools will auto-change "@return" to "_returnCode"
+                var returnParam = mDBTools.AddParameter(cmd, "@Return", SqlType.Int, ParameterDirection.ReturnValue);
+
                 mDBTools.AddTypedParameter(cmd, "@EntryID", SqlType.Int, value: statusInfo.EntryID);
                 mDBTools.AddTypedParameter(cmd, "@DataPackageID", SqlType.Int, value: statusInfo.DataPackageID);
                 mDBTools.AddTypedParameter(cmd, "@Available", SqlType.TinyInt, value: BoolToTinyInt(true));
@@ -1242,13 +1251,16 @@ namespace DataPackage_Archive_Manager
                 ReportMessage("  Calling " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Data Package " + statusInfo.DataPackageID, BaseLogger.LogLevels.DEBUG);
 
                 cmd.CommandTimeout = 20;
-                var resCode = mDBTools.ExecuteSP(cmd, 2);
+                mDBTools.ExecuteSP(cmd, 2);
 
-                if (resCode == 0)
+                var returnCode = DBToolsBase.GetReturnCode(returnParam);
+
+                if (returnCode == 0)
                     return true;
 
-                var msg = "Error " + resCode + " calling stored procedure " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS;
+                var msg = string.Format("Error {0} calling stored procedure {1}", returnCode, SP_NAME_SET_MYEMSL_UPLOAD_STATUS);
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg);
+
                 return false;
             }
             catch (Exception ex)
