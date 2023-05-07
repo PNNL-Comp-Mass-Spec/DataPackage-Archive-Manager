@@ -1240,7 +1240,7 @@ namespace DataPackage_Archive_Manager
                 mDBTools.AddTypedParameter(cmd, "@DataPackageID", SqlType.Int, value: statusInfo.DataPackageID);
                 mDBTools.AddTypedParameter(cmd, "@Available", SqlType.TinyInt, value: BoolToTinyInt(true));
                 mDBTools.AddTypedParameter(cmd, "@Verified", SqlType.TinyInt, value: BoolToTinyInt(verified));
-                mDBTools.AddParameter(cmd, "@message", SqlType.VarChar, 512, ParameterDirection.Output);
+                mDBTools.AddParameter(cmd, "@message", SqlType.VarChar, 512, ParameterDirection.InputOutput);
 
                 if (PreviewMode)
                 {
