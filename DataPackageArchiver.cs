@@ -953,7 +953,7 @@ namespace DataPackage_Archive_Manager
 
                 // Check whether the MyEMSL Metadata query returned results
                 // If it did not, either this is a new data package, or we had a query error
-                var archiveFileCountExisting = dataPackageInfoCache.FindFiles("*", "", dataPkgInfo.ID).Count;
+                var archiveFileCountExisting = dataPackageInfoCache.FindFiles("*", string.Empty, dataPkgInfo.ID).Count;
 
                 if (archiveFileCountExisting == 0)
                 {
@@ -1534,7 +1534,7 @@ namespace DataPackage_Archive_Manager
                     return UploadStatus.Success;
                 }
 
-                var archiveFiles = dataPackageInfoCache.FindFiles("*", "", statusInfo.Value.DataPackageID);
+                var archiveFiles = dataPackageInfoCache.FindFiles("*", string.Empty, statusInfo.Value.DataPackageID);
 
                 if (archiveFiles.Count > 0)
                 {
