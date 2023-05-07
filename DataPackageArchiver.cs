@@ -266,6 +266,20 @@ namespace DataPackage_Archive_Manager
             uploadInfo.Bytes += localFile.Length;
         }
 
+        /// <summary>
+        /// Prefix the stored procedure name using "dpkg." if the connection string is for a PostgreSQL server
+        /// </summary>
+        /// <param name="procedureName"></param>
+        /// <returns>Stored procedure name to use</returns>
+        private string AddSchemaIfPostgres(string procedureName)
+        {
+            var serverType = DbToolsFactory.GetServerTypeFromConnectionString(CONNECTION_STRING);
+
+            return serverType == DbServerTypes.PostgreSQL
+                ? string.Format("dpkg.{0}", procedureName)
+                : procedureName;
+        }
+
         private short BoolToTinyInt(bool value)
         {
             return (short)(value ? 1 : 0);
@@ -1178,8 +1192,10 @@ namespace DataPackage_Archive_Manager
         {
             try
             {
+                var spName = AddSchemaIfPostgres(SP_NAME_STORE_MYEMSL_STATS);
+
                 // Setup for execution of the stored procedure
-                var cmd = mDBTools.CreateCommand(SP_NAME_STORE_MYEMSL_STATS, CommandType.StoredProcedure);
+                var cmd = mDBTools.CreateCommand(spName, CommandType.StoredProcedure);
 
                 // Define parameter for procedure's return value
                 // If querying a Postgres DB, mDBTools will auto-change "@return" to "_returnCode"
@@ -1194,7 +1210,7 @@ namespace DataPackage_Archive_Manager
                 mDBTools.AddParameter(cmd, "@StatusURI", SqlType.VarChar, 255, uploadInfo.StatusURI);
                 mDBTools.AddParameter(cmd, "@ErrorCode", SqlType.Int).Value = uploadInfo.ErrorCode;
 
-                ReportMessage("Calling " + SP_NAME_STORE_MYEMSL_STATS + " for Data Package " + dataPkgInfo.ID, BaseLogger.LogLevels.DEBUG);
+                ReportMessage("Calling " + spName + " for Data Package " + dataPkgInfo.ID, BaseLogger.LogLevels.DEBUG);
 
                 // Execute the SP (retry the call up to 4 times)
                 cmd.CommandTimeout = 20;
@@ -1207,7 +1223,7 @@ namespace DataPackage_Archive_Manager
                     return true;
                 }
 
-                var msg = string.Format("Error {0} storing MyEMSL Upload Stats using {1}", returnCode, SP_NAME_STORE_MYEMSL_STATS);
+                var msg = string.Format("Error {0} storing MyEMSL Upload Stats using {1}", returnCode, spName);
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg);
 
                 return false;
@@ -1228,9 +1244,11 @@ namespace DataPackage_Archive_Manager
         // ReSharper disable once UnusedMethodReturnValue.Local
         private bool UpdateMyEMSLUploadStatus(MyEMSLStatusInfo statusInfo, bool verified)
         {
+            var spName = AddSchemaIfPostgres(SP_NAME_SET_MYEMSL_UPLOAD_STATUS);
+
             try
             {
-                var cmd = mDBTools.CreateCommand(SP_NAME_SET_MYEMSL_UPLOAD_STATUS, CommandType.StoredProcedure);
+                var cmd = mDBTools.CreateCommand(spName, CommandType.StoredProcedure);
 
                 // Define parameter for procedure's return value
                 // If querying a Postgres DB, mDBTools will auto-change "@return" to "_returnCode"
@@ -1244,11 +1262,11 @@ namespace DataPackage_Archive_Manager
 
                 if (PreviewMode)
                 {
-                    Console.WriteLine("Simulate call to " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Entry_ID=" + statusInfo.EntryID + ", DataPackageID=" + statusInfo.DataPackageID + " Entry_ID=" + statusInfo.EntryID);
+                    Console.WriteLine("Simulate call to " + spName + " for Entry_ID=" + statusInfo.EntryID + ", DataPackageID=" + statusInfo.DataPackageID + " Entry_ID=" + statusInfo.EntryID);
                     return true;
                 }
 
-                ReportMessage("  Calling " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS + " for Data Package " + statusInfo.DataPackageID, BaseLogger.LogLevels.DEBUG);
+                ReportMessage("  Calling " + spName + " for Data Package " + statusInfo.DataPackageID, BaseLogger.LogLevels.DEBUG);
 
                 cmd.CommandTimeout = 20;
                 mDBTools.ExecuteSP(cmd, 2);
@@ -1258,14 +1276,14 @@ namespace DataPackage_Archive_Manager
                 if (returnCode == 0)
                     return true;
 
-                var msg = string.Format("Error {0} calling stored procedure {1}", returnCode, SP_NAME_SET_MYEMSL_UPLOAD_STATUS);
+                var msg = string.Format("Error {0} calling stored procedure {1}", returnCode, spName);
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg);
 
                 return false;
             }
             catch (Exception ex)
             {
-                const string msg = "Exception calling stored procedure " + SP_NAME_SET_MYEMSL_UPLOAD_STATUS;
+                var msg = "Exception calling stored procedure " + spName;
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg, ex);
                 return false;
             }
