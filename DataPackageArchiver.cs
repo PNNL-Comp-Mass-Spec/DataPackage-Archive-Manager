@@ -60,7 +60,7 @@ namespace DataPackage_Archive_Manager
             /// <summary>
             /// Show the data package ID and Status URI
             /// </summary>
-            public override string ToString()
+            public override readonly string ToString()
             {
                 return string.Format("Data package {0}: {1}", DataPackageID, StatusURI ?? string.Empty);
             }
@@ -90,7 +90,7 @@ namespace DataPackage_Archive_Manager
             /// <summary>
             /// Show file counts
             /// </summary>
-            public override string ToString()
+            public readonly override string ToString()
             {
                 return string.Format(
                     "{0} new files, {1} updated files, {2:N0} total bytes",
