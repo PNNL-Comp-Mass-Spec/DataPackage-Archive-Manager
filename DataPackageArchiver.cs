@@ -20,7 +20,7 @@ namespace DataPackage_Archive_Manager
     {
         // Ignore Spelling: DataPkgs, misconfigured, msgfdb, pnl, pre, protoapps, UtcNow, yyyy-MM-dd
 
-        public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;";
+        public const string CONNECTION_STRING = "Host=prismdb2.emsl.pnl.gov;Port=5432;Database=dms;UserId=svc-dms";
 
         private const string SP_NAME_STORE_MYEMSL_STATS = "store_myemsl_upload_stats";
         private const string SP_NAME_SET_MYEMSL_UPLOAD_STATUS = "set_myemsl_upload_status";
