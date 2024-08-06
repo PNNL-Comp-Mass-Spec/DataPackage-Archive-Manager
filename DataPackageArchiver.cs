@@ -517,12 +517,12 @@ namespace DataPackage_Archive_Manager
             var dateThreshold = DateTime.Now.AddDays(-45);
 
             var sql = string.Format(
-                " SELECT MU.entry_id, MU.data_pkg_id, MU.entered, MU.status_num, MU.status_uri, DP.local_path, DP.share_path, DP.owner " +
-                " FROM V_MyEMSL_Data_Package_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.data_pkg_id = DP.data_pkg_id" +
-                " WHERE MU.error_code = 0 AND " +
-                "       (MU.available = 0 Or MU.verified = 0) AND " +
-                "       Coalesce(MU.status_num, 0) > 0 AND" +
-                "       Entered >= '{0:yyyy-MM-dd}'",
+                "SELECT MU.entry_id, MU.data_pkg_id, MU.entered, MU.status_num, MU.status_uri, DP.local_path, DP.share_path, DP.owner " +
+                "FROM V_MyEMSL_Data_Package_Uploads MU INNER JOIN V_Data_Package_Export DP ON MU.data_pkg_id = DP.data_pkg_id " +
+                "WHERE MU.error_code = 0 AND" +
+                "      (MU.available = 0 OR MU.verified = 0) AND " +
+                "      Coalesce(MU.status_num, 0) > 0 AND" +
+                "      Entered >= '{0:yyyy-MM-dd}'",
                 dateThreshold);
 
             var success = mDBTools.GetQueryResultsDataTable(sql, out var table, retryCount);
@@ -586,10 +586,10 @@ namespace DataPackage_Archive_Manager
             var dataPkgInfo = new List<DataPackageInfo>();
             var sql = new StringBuilder();
 
-            sql.Append(" SELECT id, name, owner, instrument, " +
-                       " eus_person_id, eus_proposal_id, eus_instrument_id, created, " +
-                       " package_file_folder, share_path, local_path, myemsl_uploads " +
-                       " FROM V_Data_Package_Export");
+            sql.Append("SELECT id, name, owner, instrument," +
+                       "       eus_person_id, eus_proposal_id, eus_instrument_id, created," +
+                       "       package_file_folder, share_path, local_path, myemsl_uploads " +
+                       "FROM V_Data_Package_Export");
 
             if (dataPkgIDs.Count > 0)
             {
