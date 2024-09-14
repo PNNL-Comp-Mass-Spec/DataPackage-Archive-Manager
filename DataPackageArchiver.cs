@@ -13,6 +13,7 @@ using Pacifica.DMSDataUpload;
 using PRISM;
 using PRISM.Logging;
 using PRISMDatabaseUtils;
+using PRISMDatabaseUtils.Logging;
 
 namespace DataPackage_Archive_Manager
 {
@@ -292,6 +293,34 @@ namespace DataPackage_Archive_Manager
                 dataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
 
             return !dataPkg.Exists ? 0 : dataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
+        }
+
+        /// <summary>
+        /// Initializes the database logger in static class PRISM.Logging.LogTools
+        /// </summary>
+        /// <remarks>Supports both SQL Server and Postgres connection strings</remarks>
+        /// <param name="connectionString">Database connection string</param>
+        /// <param name="moduleName">Module name used by logger</param>
+        /// <param name="traceMode">When true, show additional debug messages at the console</param>
+        /// <param name="logLevel">Log threshold level</param>
+        private void CreateDbLogger(
+            string connectionString,
+            string moduleName,
+            bool traceMode = false,
+            BaseLogger.LogLevels logLevel = BaseLogger.LogLevels.INFO)
+        {
+            var databaseType = DbToolsFactory.GetServerTypeFromConnectionString(connectionString);
+
+            DatabaseLogger dbLogger = databaseType switch
+            {
+                DbServerTypes.MSSQLServer => new SQLServerDatabaseLogger(),
+                DbServerTypes.PostgreSQL => new PostgresDatabaseLogger(),
+                _ => throw new Exception("Unsupported database connection string: should be SQL Server or Postgres")
+            };
+
+            dbLogger.ChangeConnectionInfo(moduleName, connectionString);
+
+            LogTools.SetDbLogger(dbLogger, logLevel, traceMode);
         }
 
         private bool FilePassesFilters(ICollection<string> filesToSkip, ICollection<string> extensionsToSkip, FileInfo dataPkgFile)
@@ -574,7 +603,10 @@ namespace DataPackage_Archive_Manager
 
             LogTools.CreateFileLogger(logFileNameBase, LogLevel);
 
-            LogTools.CreateDbLogger(DBConnectionString, "DataPkgArchiver: " + Environment.MachineName);
+            // Create a database logger connected to the DMS database on prismdb2 (previously, DMS_Data_Package on Gigasax)
+
+            var hostName = System.Net.Dns.GetHostName();
+            CreateDbLogger(DBConnectionString, "DataPkgArchiver: " + hostName, TraceMode);
 
             // Make initial log entry
             var msg = "=== Started Data Package Archiver V" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " ===== ";
