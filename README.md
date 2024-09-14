@@ -27,7 +27,7 @@ Use `/Preview` to preview any files that would be uploaded
 Use `/VerifyOnly` or `/V` to verify recently uploaded data packages and skip looking for new/changed files
 
 Use `/DB` to override the default connection string
-* Defaults to: `Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;`
+* Defaults to: `Host=prismdb2.emsl.pnl.gov;Port=5432;Database=dms;UserId=svc-dms`
 
 Use `/SkipCheckExisting` to skip the check for data package files that are known to exist in MyEMSL and should be visible by a metadata query
 * If this switch is used, you risk pushing duplicate data files into MyEMSL

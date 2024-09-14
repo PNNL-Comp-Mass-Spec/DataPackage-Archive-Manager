@@ -109,7 +109,7 @@ namespace DataPackage_Archive_Manager
         public bool DisableVerify { get; set; }
 
         /// <summary>
-        /// Gigasax.DMS_Data_Package database
+        /// DMS database on prismdb2 (previously, DMS_Data_Package on Gigasax)
         /// </summary>
         public string DBConnectionString { get; }
 
@@ -149,8 +149,7 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         public DataPackageArchiver(string connectionString, BaseLogger.LogLevels logLevel)
         {
-            // Typically:
-            // Data Source=gigasax;Initial Catalog=DMS_Data_Package;Integrated Security=SSPI;
+            // This connection string points to the DMS database on prismdb2 (previously, DMS_Data_Package on Gigasax)
             DBConnectionString = connectionString;
             LogLevel = logLevel;
 

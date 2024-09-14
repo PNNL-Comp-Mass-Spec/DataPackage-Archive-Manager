@@ -45,7 +45,7 @@ namespace DataPackage_Archive_Manager
             DateThreshold = DateTime.MinValue;
             DateThresholdString = string.Empty;
 
-            // Gigasax.DMS_Data_Package
+            // This connection string points to the DMS database on prismdb2 (previously, DMS_Data_Package on Gigasax)
             DBConnectionString = DataPackageArchiver.CONNECTION_STRING;
         }
 
