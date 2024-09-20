@@ -35,12 +35,6 @@
     <NoWarn>IDE0028</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MyEMSLReader">
-      <HintPath>Lib\MyEMSLReader.dll</HintPath>
-    </Reference>
-    <Reference Include="Pacifica">
-      <HintPath>Lib\Pacifica.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -61,6 +55,12 @@
     <None Include="version.json" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="MyEMSL-Pacifica">
+      <Version>2.1.117</Version>
+    </PackageReference>
+    <PackageReference Include="MyEMSL-Reader">
+      <Version>2.1.117</Version>
+    </PackageReference>
     <PackageReference Include="Nerdbank.GitVersioning">
       <Version>3.6.143</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
