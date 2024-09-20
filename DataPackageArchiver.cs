@@ -1014,7 +1014,7 @@ namespace DataPackage_Archive_Manager
                             "Data package " + dataPkgInfo.ID +
                             " was previously uploaded to MyEMSL, yet the Metadata query did not return any files for this dataset." +
                             " Skipping this data package to prevent the addition of duplicate files to MyEMSL." +
-                            " To allow this upload, change ErrorCode to 101 in DMS_Data_Package.dbo.T_MyEMSL_Uploads"
+                            " To allow this upload, change ErrorCode to 101 in dpkg.T_MyEMSL_Uploads"
                             ,
                             BaseLogger.LogLevels.ERROR, logToDB);
 
