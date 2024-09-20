@@ -483,7 +483,7 @@ namespace DataPackage_Archive_Manager
             foreach (var localFile in dataPackageFiles)
             {
                 // Note: when storing data package files in MyEMSL the SubDir path will always start with the data package directory name
-                var subDir = string.Copy(uploadInfo.SubDir);
+                var subDir = uploadInfo.SubDir;
 
                 if (localFile.Directory != null && localFile.Directory.FullName.Length > dataPkg.FullName.Length)
                 {
@@ -1192,7 +1192,7 @@ namespace DataPackage_Archive_Manager
             if (logToDB)
                 LogTools.WriteLog(LogTools.LoggerTypes.LogDb, BaseLogger.LogLevels.ERROR, message.Trim());
 
-            ErrorMessage = string.Copy(message);
+            ErrorMessage = message;
         }
 
         /// <summary>
