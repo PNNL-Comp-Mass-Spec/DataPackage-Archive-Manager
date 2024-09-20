@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RootNamespace>DataPackage_Archive_Manager</RootNamespace>
     <AssemblyName>DataPackage_Archive_Manager</AssemblyName>
