@@ -433,9 +433,9 @@ namespace DataPackage_Archive_Manager
             if (dataPackageFiles.Count > MAX_FILES_TO_ARCHIVE)
             {
                 ReportError(string.Format(
-                    " Data Package {0} has {1} files;" +
-                    " the maximum number of files allowed in MyEMSL per data package is {2};" +
-                    " zip up groups of files to reduce the total file count; see {3}",
+                    "Data Package {0} has {1} files; " +
+                    "the maximum number of files allowed in MyEMSL per data package is {2}; " +
+                    "zip groups of files to reduce the total file count; see {3}",
                     dataPkgInfo.ID, dataPackageFiles.Count, MAX_FILES_TO_ARCHIVE, dataPkgInfo.SharePath));
 
                 return new List<FileInfoObject>();
@@ -444,7 +444,7 @@ namespace DataPackage_Archive_Manager
             if (dataPackageFiles.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                var msg = " Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all have been skipped";
+                var msg = "Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all have been skipped";
 
                 if (dataPackageDirectoriesToSkip.Count > 0)
                     msg += " due to recently modified files in auto-job result directories";
@@ -452,7 +452,7 @@ namespace DataPackage_Archive_Manager
                     msg += " since they are system or temporary files";
 
                 ReportMessage(msg + "; nothing to archive");
-                ReportMessage(" Data Package " + dataPkgInfo.ID + " path: " + dataPkg.FullName, BaseLogger.LogLevels.DEBUG);
+                ReportMessage("Data Package " + dataPkgInfo.ID + " path: " + dataPkg.FullName, BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
 
@@ -465,9 +465,9 @@ namespace DataPackage_Archive_Manager
                 string msg;
 
                 if (dataPackageFilesAll.Count == 1)
-                    msg = " Data Package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
+                    msg = "Data Package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
                 else
-                    msg = " Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
+                    msg = "Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
 
                 ReportMessage(msg + "; nothing to archive", BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
@@ -523,7 +523,7 @@ namespace DataPackage_Archive_Manager
             if (datasetFilesToArchive.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                ReportMessage(" All files for Data Package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + dataPackageFiles.Count, BaseLogger.LogLevels.DEBUG);
+                ReportMessage("All files for Data Package " + dataPkgInfo.ID + " are already in MyEMSL; FileCount=" + dataPackageFiles.Count, BaseLogger.LogLevels.DEBUG);
                 return datasetFilesToArchive;
             }
 
