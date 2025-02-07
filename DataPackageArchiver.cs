@@ -750,6 +750,7 @@ namespace DataPackage_Archive_Manager
                 {
                     var idRange = new KeyValuePair<int, int>(dataPkgIDStart, dataPkgIDEnd);
 
+                    // ReSharper disable once UsageOfDefaultStructEquality
                     if (!dataPkgIDs.Contains(idRange))
                     {
                         dataPkgIDs.Add(idRange);
