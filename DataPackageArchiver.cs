@@ -61,7 +61,7 @@ namespace DataPackage_Archive_Manager
             /// <summary>
             /// Show the data package ID and Status URI
             /// </summary>
-            public override readonly string ToString()
+            public readonly override string ToString()
             {
                 return string.Format("Data package {0}: {1}", DataPackageID, StatusURI ?? string.Empty);
             }
@@ -716,7 +716,7 @@ namespace DataPackage_Archive_Manager
                 string endID;
 
                 // Check for a range of data package IDs
-                var dashIndex = item.IndexOf("-", StringComparison.Ordinal);
+                var dashIndex = item.IndexOf('-');
 
                 if (dashIndex == 0)
                 {
@@ -751,7 +751,9 @@ namespace DataPackage_Archive_Manager
                     var idRange = new KeyValuePair<int, int>(dataPkgIDStart, dataPkgIDEnd);
 
                     if (!dataPkgIDs.Contains(idRange))
+                    {
                         dataPkgIDs.Add(idRange);
+                    }
                 }
                 else
                 {
@@ -902,7 +904,7 @@ namespace DataPackage_Archive_Manager
             if (successCount == dataPkgInfo.Count)
             {
                 if (successCount == 1)
-                    ReportMessage("Processing complete for Data Package " + dataPkgInfo.First().ID);
+                    ReportMessage("Processing complete for Data Package " + dataPkgInfo[0].ID);
                 else
                     ReportMessage("Processed " + successCount + " data packages");
 
@@ -966,7 +968,7 @@ namespace DataPackage_Archive_Manager
                         {
                             ReportError(string.Format(
                                 "Data Package {0} has an existing metadata file over 6.5 days old; deleting file: {1}",
-                                dataPkgInfo.ID , metadataFile.FullName), true);
+                                dataPkgInfo.ID, metadataFile.FullName), true);
                             metadataFile.Delete();
                         }
                         else
@@ -1255,7 +1257,7 @@ namespace DataPackage_Archive_Manager
 
                 ReportMessage("Calling " + spName + " for Data Package " + dataPkgInfo.ID, BaseLogger.LogLevels.DEBUG);
 
-                // Execute the SP (retry the call up to 4 times)
+                // Execute the SP (retry up to 4 times)
                 cmd.CommandTimeout = 20;
                 mDBTools.ExecuteSP(cmd, 4);
 
@@ -1491,7 +1493,7 @@ namespace DataPackage_Archive_Manager
                         var currentDataPackageID = distinctDataPackageIDs[j];
                         dataPackageInfoCache.AddDataPackage(currentDataPackageID);
 
-                        // Find all of the URIs for this data package
+                        // Find the URIs for this data package
                         var query = from item in statusURIs where item.Value.DataPackageID == currentDataPackageID select item;
 
                         foreach (var uriItem in query)
@@ -1558,7 +1560,7 @@ namespace DataPackage_Archive_Manager
 
                 var ingestState = serverResponse.State;
 
-                if (string.Equals((string)ingestState, "failed", StringComparison.InvariantCultureIgnoreCase) ||
+                if (string.Equals(ingestState, "failed", StringComparison.OrdinalIgnoreCase) ||
                     !string.IsNullOrWhiteSpace(errorMessage))
                 {
                     // Error should have already been logged during the call to GetIngestStatus
