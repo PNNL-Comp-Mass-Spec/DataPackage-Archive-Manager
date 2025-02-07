@@ -271,7 +271,7 @@ namespace DataPackage_Archive_Manager
         /// </summary>
         /// <param name="procedureName"></param>
         /// <returns>Stored procedure name to use</returns>
-        private string AddSchemaIfPostgres(string procedureName)
+        private static string AddSchemaIfPostgres(string procedureName)
         {
             var serverType = DbToolsFactory.GetServerTypeFromConnectionString(CONNECTION_STRING);
 
@@ -280,12 +280,12 @@ namespace DataPackage_Archive_Manager
                 : procedureName;
         }
 
-        private short BoolToTinyInt(bool value)
+        private static short BoolToTinyInt(bool value)
         {
             return (short)(value ? 1 : 0);
         }
 
-        private int CountFilesForDataPackage(DataPackageInfo dataPkgInfo)
+        private static int CountFilesForDataPackage(DataPackageInfo dataPkgInfo)
         {
             var dataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
             if (!dataPkg.Exists)
@@ -302,7 +302,7 @@ namespace DataPackage_Archive_Manager
         /// <param name="moduleName">Module name used by logger</param>
         /// <param name="traceMode">When true, show additional debug messages at the console</param>
         /// <param name="logLevel">Log threshold level</param>
-        private void CreateDbLogger(
+        private static void CreateDbLogger(
             string connectionString,
             string moduleName,
             bool traceMode = false,
@@ -530,7 +530,7 @@ namespace DataPackage_Archive_Manager
             return datasetFilesToArchive;
         }
 
-        private IEnumerable<DataPackageInfo> GetFilteredDataPackageInfoList(
+        private static List<DataPackageInfo> GetFilteredDataPackageInfoList(
             IEnumerable<DataPackageInfo> dataPkgInfo,
             IEnumerable<int> dataPkgGroup)
         {
