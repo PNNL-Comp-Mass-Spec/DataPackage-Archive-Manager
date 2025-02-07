@@ -171,9 +171,12 @@ namespace DataPackage_Archive_Manager
         private static void AddFileIfArchiveRequired(
             DirectoryInfo dataPkg,
             ref MyEMSLUploadInfo uploadInfo,
-            ICollection<FileInfoObject> datasetFilesToArchive,
+            // ReSharper disable SuggestBaseTypeForParameter
+            List<FileInfoObject> datasetFilesToArchive,
             FileInfo localFile,
-            ICollection<DatasetDirectoryOrFileInfo> archiveFiles)
+            List<DatasetDirectoryOrFileInfo> archiveFiles
+            // ReSharper restore SuggestBaseTypeForParameter
+            )
         {
             if (archiveFiles.Count == 0)
             {
@@ -322,7 +325,12 @@ namespace DataPackage_Archive_Manager
             LogTools.SetDbLogger(dbLogger, logLevel, traceMode);
         }
 
-        private bool FilePassesFilters(ICollection<string> filesToSkip, ICollection<string> extensionsToSkip, FileInfo dataPkgFile)
+        private static bool FilePassesFilters(
+            // ReSharper disable SuggestBaseTypeForParameter
+            SortedSet<string> filesToSkip,
+            SortedSet<string> extensionsToSkip,
+            // ReSharper restore SuggestBaseTypeForParameter
+            FileInfo dataPkgFile)
         {
             if (dataPkgFile.Length == 0)
                 return false;
@@ -612,7 +620,7 @@ namespace DataPackage_Archive_Manager
             LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.INFO, msg);
         }
 
-        private List<DataPackageInfo> LookupDataPkgInfo(IReadOnlyList<KeyValuePair<int, int>> dataPkgIDs)
+        private List<DataPackageInfo> LookupDataPkgInfo(List<KeyValuePair<int, int>> dataPkgIDs)
         {
             var dataPkgInfo = new List<DataPackageInfo>();
             var sql = new StringBuilder();
@@ -626,25 +634,29 @@ namespace DataPackage_Archive_Manager
             {
                 sql.Append(" WHERE ");
 
-                for (var i = 0; i < dataPkgIDs.Count; i++)
+                var i = 0;
+
+                foreach (var idRange in dataPkgIDs)
                 {
                     if (i > 0)
                     {
                         sql.Append(" OR ");
                     }
 
-                    if (dataPkgIDs[i].Key == dataPkgIDs[i].Value)
+                    if (idRange.Key == idRange.Value)
                     {
-                        sql.AppendFormat("id = {0}", dataPkgIDs[i].Key);
+                        sql.AppendFormat("id = {0}", idRange.Key);
                     }
-                    else if (dataPkgIDs[i].Value < 0)
+                    else if (idRange.Value < 0)
                     {
-                        sql.AppendFormat("id >= {0}", dataPkgIDs[i].Key);
+                        sql.AppendFormat("id >= {0}", idRange.Key);
                     }
                     else
                     {
-                        sql.AppendFormat("id BETWEEN {0} AND {1}", dataPkgIDs[i].Key, dataPkgIDs[i].Value);
+                        sql.AppendFormat("id BETWEEN {0} AND {1}", idRange.Key, idRange.Value);
                     }
+
+                    i++;
                 }
             }
 
@@ -1414,13 +1426,15 @@ namespace DataPackage_Archive_Manager
             }
         }
 
+        // ReSharper disable once SuggestBaseTypeForParameter
+
         /// <summary>
         /// Add a new data package ID and list of expected filenames to the dataPackageIDs dictionary
         /// </summary>
-        /// <param name="dataPackageIDs"></param>
-        /// <param name="dataPkgID"></param>
-        /// <param name="fileNames"></param>
-        private void VerifyKnownResultsAddExpectedFiles(IDictionary<int, List<string>> dataPackageIDs, int dataPkgID, List<string> fileNames)
+        /// <param name="dataPackageIDs">Dictionary with data package IDs and files</param>
+        /// <param name="dataPkgID">Data package ID to add</param>
+        /// <param name="fileNames">Files to add</param>
+        private static void VerifyKnownResultsAddExpectedFiles(Dictionary<int, List<string>> dataPackageIDs, int dataPkgID, List<string> fileNames)
         {
             dataPackageIDs.Add(dataPkgID, fileNames);
         }
