@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DataPackage_Archive_Manager": {
+      "commandName": "Project",
+      "commandLineArgs": "/IDs:\"3046-3048,4010-4012\" /D:\"2013-09-26\" /debug\r\n"
+    }
+  }
+}
