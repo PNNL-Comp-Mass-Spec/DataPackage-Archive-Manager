@@ -1,11 +1,23 @@
+@echo off
+
+set TargetBase=\\pnl\projects\OmicsSW\DMS_Programs\AnalysisToolManagerDistribution\DataPackage_Archive_Manager
+echo Copying to %TargetBase%
+
 @echo on
+xcopy net8.0\DataPackage_Archive_Manager.exe %TargetBase% /D /Y /S
+xcopy net8.0\DataPackage_Archive_Manager.dll %TargetBase% /D /Y /S
+xcopy net8.0\*.dll %TargetBase% /D /Y /S
+@echo off
 
-xcopy Debug\net8.0\DataPackage_Archive_Manager.exe \\pnl\projects\OmicsSW\DMS_Programs\AnalysisToolManagerDistribution\DataPackage_Archive_Manager /D /Y
-xcopy Debug\net8.0\DataPackage_Archive_Manager.dll \\pnl\projects\OmicsSW\DMS_Programs\AnalysisToolManagerDistribution\DataPackage_Archive_Manager /D /Y
-xcopy Debug\net8.0\*.dll \\pnl\projects\OmicsSW\DMS_Programs\AnalysisToolManagerDistribution\DataPackage_Archive_Manager /D /Y
+echo.
+set TargetBase=\\protoapps\DMS_Programs\DataPackage_Archive_Manager
+echo Copying to %TargetBase%
 
-xcopy Debug\net8.0\DataPackage_Archive_Manager.exe \\protoapps\DMS_Programs\DataPackage_Archive_Manager /D /Y
-xcopy Debug\net8.0\DataPackage_Archive_Manager.dll \\protoapps\DMS_Programs\DataPackage_Archive_Manager /D /Y
-xcopy Debug\net8.0\*.dll \\protoapps\DMS_Programs\DataPackage_Archive_Manager /D /Y
+@echo on
+xcopy net8.0\DataPackage_Archive_Manager.exe %TargetBase% /D /Y /S
+xcopy net8.0\DataPackage_Archive_Manager.dll %TargetBase% /D /Y /S
+xcopy net8.0\*.dll %TargetBase% /D /Y /S
+@echo off
 
+echo.
 if not "%1"=="NoPause" pause
