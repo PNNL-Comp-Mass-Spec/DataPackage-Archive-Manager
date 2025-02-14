@@ -182,7 +182,9 @@ namespace DataPackage_Archive_Manager
             {
                 // File not found; add to datasetFilesToArchive
                 if (dataPkg.Parent == null)
+                {
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+                }
 
                 datasetFilesToArchive.Add(new FileInfoObject(localFile, dataPkg.Parent.FullName));
                 uploadInfo.FileCountNew++;
@@ -240,17 +242,23 @@ namespace DataPackage_Archive_Manager
                 }
 
                 if (dataPkg.Parent == null)
+                {
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+                }
 
                 // Hashes don't match
                 mismatchCount++;
             }
 
             if (matchCount > 0 || mismatchCount == 0)
+            {
                 return;
+            }
 
             if (dataPkg.Parent == null)
+            {
                 throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+            }
 
             if (string.IsNullOrEmpty(sha1HashHex))
             {
@@ -292,7 +300,9 @@ namespace DataPackage_Archive_Manager
         {
             var dataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
             if (!dataPkg.Exists)
+            {
                 dataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
+            }
 
             return !dataPkg.Exists ? 0 : dataPkg.GetFiles("*.*", SearchOption.AllDirectories).Length;
         }
@@ -333,19 +343,29 @@ namespace DataPackage_Archive_Manager
             FileInfo dataPkgFile)
         {
             if (dataPkgFile.Length == 0)
+            {
                 return false;
+            }
 
             if (filesToSkip.Contains(dataPkgFile.Name))
+            {
                 return false;
+            }
 
             if (extensionsToSkip.Contains(dataPkgFile.Extension))
+            {
                 return false;
+            }
 
             if (dataPkgFile.Name.StartsWith("~$") && ((dataPkgFile.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden))
+            {
                 return false;
+            }
 
             if (dataPkgFile.Name.StartsWith("SyncToy_") && dataPkgFile.Name.EndsWith(".dat"))
+            {
                 return false;
+            }
 
             return !dataPkgFile.Name.EndsWith(".mzml.gz", StringComparison.OrdinalIgnoreCase);
         }
@@ -400,7 +420,9 @@ namespace DataPackage_Archive_Manager
                 }
 
                 if (skipDataPkg)
+                {
                     dataPackageDirectoriesToSkip.Add(dataPkgDirectory.FullName);
+                }
             }
 
             // Filter out files that we do not want to archive
@@ -424,7 +446,9 @@ namespace DataPackage_Archive_Manager
             foreach (var dataPkgFile in dataPackageFilesAll)
             {
                 if (!FilePassesFilters(filesToSkip, extensionsToSkip, dataPkgFile))
+                {
                     continue;
+                }
 
                 if (dataPkgFile.Directory != null)
                 {
@@ -432,7 +456,9 @@ namespace DataPackage_Archive_Manager
                     var keep = dataPackageDirectoriesToSkip.All(dataPkgDirectory => !dataPkgFile.Directory.FullName.StartsWith(dataPkgDirectory));
 
                     if (!keep)
+                    {
                         continue;
+                    }
                 }
 
                 dataPackageFiles.Add(dataPkgFile);
@@ -473,9 +499,13 @@ namespace DataPackage_Archive_Manager
                 string msg;
 
                 if (dataPackageFilesAll.Count == 1)
+                {
                     msg = "Data Package " + dataPkgInfo.ID + " has 1 file, but it was modified before " + dateThreshold.ToString("yyyy-MM-dd");
+                }
                 else
+                {
                     msg = "Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all were modified before " + dateThreshold.ToString("yyyy-MM-dd");
+                }
 
                 ReportMessage(msg + "; nothing to archive", BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
@@ -503,14 +533,18 @@ namespace DataPackage_Archive_Manager
                 var archiveFiles = dataPackageInfoCache.FindFiles(localFile.Name, subDir, dataPkgInfo.ID, string.Empty, recurse: false);
 
                 if (dataPkg.Parent == null)
+                {
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+                }
 
                 // Possibly add the file to datasetFilesToArchive
                 AddFileIfArchiveRequired(dataPkg, ref uploadInfo, datasetFilesToArchive, localFile, archiveFiles);
 
                 filesProcessed++;
                 if (DateTime.UtcNow.Subtract(lastProgressDetail).TotalSeconds < 5)
+                {
                     continue;
+                }
 
                 lastProgressDetail = DateTime.UtcNow;
 
@@ -564,7 +598,9 @@ namespace DataPackage_Archive_Manager
             var success = mDBTools.GetQueryResultsDataTable(sql, out var table, retryCount);
 
             if (!success)
+            {
                 OnWarningEvent("GetQueryResultsDataTable reported false querying V_MyEMSL_Uploads");
+            }
 
             foreach (DataRow row in table.Rows)
             {
@@ -585,6 +621,7 @@ namespace DataPackage_Archive_Manager
                 }
 
                 var statusURI = row[4].CastDBVal(string.Empty);
+
                 if (!string.IsNullOrWhiteSpace(statusURI))
                 {
                     statusInfo.StatusURI = statusURI;
@@ -665,7 +702,9 @@ namespace DataPackage_Archive_Manager
             var success = mDBTools.GetQueryResultsDataTable(sql.ToString(), out var table, retryCount: 1);
 
             if (!success)
+            {
                 OnWarningEvent("GetQueryResultsDataTable reported false querying V_Data_Package_Export");
+            }
 
             foreach (DataRow row in table.Rows)
             {
@@ -736,9 +775,13 @@ namespace DataPackage_Archive_Manager
                     startID = item.Substring(0, dashIndex);
 
                     if (dashIndex == item.Length - 1)
+                    {
                         endID = "-1";
+                    }
                     else
+                    {
                         endID = item.Substring(dashIndex + 1);
+                    }
                 }
                 else
                 {
@@ -811,7 +854,9 @@ namespace DataPackage_Archive_Manager
                     {
                         // Store the current group
                         if (currentGroup.Count > 0)
+                        {
                             dataPkgGroups.Add(currentGroup);
+                        }
 
                         // Make a new group
                         currentGroup = new List<int>
@@ -836,7 +881,9 @@ namespace DataPackage_Archive_Manager
 
                 // Store the current group
                 if (currentGroup.Count > 0)
+                {
                     dataPkgGroups.Add(currentGroup);
+                }
 
                 var groupNumber = 0;
 
@@ -888,7 +935,9 @@ namespace DataPackage_Archive_Manager
                         var success = ProcessOneDataPackage(dataPkg, dateThreshold, dataPackageInfoCache);
 
                         if (success)
+                        {
                             successCount++;
+                        }
                     }
                 }
             }
@@ -905,9 +954,13 @@ namespace DataPackage_Archive_Manager
             if (successCount == dataPkgInfo.Count)
             {
                 if (successCount == 1)
+                {
                     ReportMessage("Processing complete for Data Package " + dataPkgInfo[0].ID);
+                }
                 else
+                {
                     ReportMessage("Processed " + successCount + " data packages");
+                }
 
                 // Wait 3 seconds then continue
                 // The purpose for the wait is to give MyEMSL time to process the newly ingested files;
@@ -918,7 +971,9 @@ namespace DataPackage_Archive_Manager
             }
 
             if (PreviewMode)
+            {
                 return true;
+            }
 
             if (dataPkgInfo.Count == 1)
                 ReportError("Failed to archive Data Package " + dataPkgIDs.First());
@@ -945,7 +1000,9 @@ namespace DataPackage_Archive_Manager
             {
                 var dataPkg = new DirectoryInfo(dataPkgInfo.LocalPath);
                 if (!dataPkg.Exists)
+                {
                     dataPkg = new DirectoryInfo(dataPkgInfo.SharePath);
+                }
 
                 if (!dataPkg.Exists)
                 {
@@ -954,7 +1011,9 @@ namespace DataPackage_Archive_Manager
                 }
 
                 if (dataPkg.Parent == null)
+                {
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+                }
 
                 // Look for an existing metadata file
                 // For example, \\protoapps\DataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
@@ -1144,7 +1203,9 @@ namespace DataPackage_Archive_Manager
 
                         uploadInfo.ErrorCode = mMyEMSLUploader.ErrorMessage.GetHashCode();
                         if (uploadInfo.ErrorCode == 0)
+                        {
                             uploadInfo.ErrorCode = 1;
+                        }
                     }
 
                     // Post the StatusURI info to the database
@@ -1161,7 +1222,9 @@ namespace DataPackage_Archive_Manager
 
                 uploadInfo.ErrorCode = ex.Message.GetHashCode();
                 if (uploadInfo.ErrorCode == 0)
+                {
                     uploadInfo.ErrorCode = 1;
+                }
 
                 uploadInfo.UploadTimeSeconds = DateTime.UtcNow.Subtract(startTime).TotalSeconds;
 
@@ -1177,9 +1240,13 @@ namespace DataPackage_Archive_Manager
             bool logToDB = false)
         {
             if (logToDB)
+            {
                 LogTools.WriteLog(LogTools.LoggerTypes.LogDb, logLevel, message.Trim());
+            }
             else
+            {
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, logLevel, message);
+            }
 
             switch (logLevel)
             {
@@ -1205,7 +1272,9 @@ namespace DataPackage_Archive_Manager
             LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, message);
 
             if (logToDB)
+            {
                 LogTools.WriteLog(LogTools.LoggerTypes.LogDb, BaseLogger.LogLevels.ERROR, message.Trim());
+            }
 
             ErrorMessage = message;
         }
@@ -1225,7 +1294,9 @@ namespace DataPackage_Archive_Manager
             var success = ProcessDataPackages(dataPkgIDs, dateThreshold);
 
             if (DisableVerify)
+            {
                 return success;
+            }
 
             // Verify uploaded data (even if success is false)
             VerifyUploadStatus();
@@ -1320,7 +1391,9 @@ namespace DataPackage_Archive_Manager
                 var returnCode = DBToolsBase.GetReturnCode(returnParam);
 
                 if (returnCode == 0)
+                {
                     return true;
+                }
 
                 var msg = string.Format("Error {0} calling stored procedure {1}", returnCode, spName);
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, msg);
@@ -1401,7 +1474,9 @@ namespace DataPackage_Archive_Manager
                     }
 
                     if (missingFiles.Count > 0)
+                    {
                         dataPkgMissingFiles.Add(dataPkg.Key, missingFiles);
+                    }
                 }
 
                 if (dataPkgMissingFiles.Count == 0)
@@ -1489,7 +1564,9 @@ namespace DataPackage_Archive_Manager
                     for (var j = i; j < i + DATA_PACKAGE_GROUP_SIZE; j++)
                     {
                         if (j >= distinctDataPackageIDs.Count)
+                        {
                             break;
+                        }
 
                         var currentDataPackageID = distinctDataPackageIDs[j];
                         dataPackageInfoCache.AddDataPackage(currentDataPackageID);
@@ -1513,7 +1590,9 @@ namespace DataPackage_Archive_Manager
                         var result = VerifyUploadStatusWork(statusChecker, statusInfo, dataPackageInfoCache, ref exceptionCount);
 
                         if (result == UploadStatus.CriticalError)
+                        {
                             return false;
+                        }
                     }
                 }
 
@@ -1635,7 +1714,9 @@ namespace DataPackage_Archive_Manager
                 }
 
                 if (dataPkg.Parent == null)
+                {
                     throw new DirectoryNotFoundException("Unable to determine the parent directory of " + dataPkg.FullName);
+                }
 
                 // Construct the metadata file path
                 // For example, \\protoapps\dataPkgs\Public\2014\MyEMSL_metadata_CaptureJob_1055.txt
@@ -1702,9 +1783,13 @@ namespace DataPackage_Archive_Manager
             // Note that e.ServerResponse will simply have the StatusURL if the upload succeeded
             // If a problem occurred, e.ServerResponse will either have the full server response, or may even be blank
             if (string.IsNullOrEmpty(e.ServerResponse))
+            {
                 msg += ": empty server response";
+            }
             else
+            {
                 msg += ": " + e.ServerResponse;
+            }
 
             ReportMessage(msg);
         }
