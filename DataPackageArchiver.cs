@@ -525,6 +525,8 @@ namespace DataPackage_Archive_Manager
 
                 if (localFile.Directory != null && localFile.Directory.FullName.Length > dataPkg.FullName.Length)
                 {
+                    // ReSharper disable once ReplaceSubstringWithRangeIndexer
+
                     // Append the subdirectory path
                     subDir = Path.Combine(subDir, localFile.Directory.FullName.Substring(dataPkg.FullName.Length + 1));
                 }
@@ -757,6 +759,8 @@ namespace DataPackage_Archive_Manager
                 // Check for a range of data package IDs
                 var dashIndex = item.IndexOf('-');
 
+                // ReSharper disable ReplaceSubstringWithRangeIndexer
+
                 if (dashIndex == 0)
                 {
                     if (item.Length == 1)
@@ -788,6 +792,8 @@ namespace DataPackage_Archive_Manager
                     startID = item;
                     endID = item;
                 }
+
+                // ReSharper restore ReplaceSubstringWithRangeIndexer
 
                 if (int.TryParse(startID, out var dataPkgIDStart) && int.TryParse(endID, out var dataPkgIDEnd))
                 {
@@ -928,9 +934,8 @@ namespace DataPackage_Archive_Manager
                     dataPackageInfoCache.RefreshInfo();
 
                     // Obtain the DataPackageInfo objects for the IDs in dataPkgGroup
-                    var filteredDataPkgInfo = GetFilteredDataPackageInfoList(dataPkgInfo, dataPkgGroup);
 
-                    foreach (var dataPkg in filteredDataPkgInfo)
+                    foreach (var dataPkg in GetFilteredDataPackageInfoList(dataPkgInfo, dataPkgGroup))
                     {
                         var success = ProcessOneDataPackage(dataPkg, dateThreshold, dataPackageInfoCache);
 
