@@ -478,14 +478,22 @@ namespace DataPackage_Archive_Manager
             if (dataPackageFiles.Count == 0)
             {
                 // Nothing to archive; this is not an error
-                var msg = "Data Package " + dataPkgInfo.ID + " has " + dataPackageFilesAll.Count + " files, but all have been skipped";
+                var msg = new StringBuilder();
+
+                msg.AppendFormat("Data Package {0} has {1} files, but all have been skipped", dataPkgInfo.ID, dataPackageFilesAll.Count);
 
                 if (dataPackageDirectoriesToSkip.Count > 0)
-                    msg += " due to recently modified files in auto-job result directories";
+                {
+                    msg.Append( " due to recently modified files in auto-job result directories");
+                }
                 else
-                    msg += " since they are system or temporary files";
+                {
+                    msg.Append(" since they are system or temporary files");
+                }
 
-                ReportMessage(msg + "; nothing to archive");
+                msg.Append("; nothing to archive");
+
+                ReportMessage(msg.ToString());
                 ReportMessage("Data Package " + dataPkgInfo.ID + " path: " + dataPkg.FullName, BaseLogger.LogLevels.DEBUG);
                 return new List<FileInfoObject>();
             }
