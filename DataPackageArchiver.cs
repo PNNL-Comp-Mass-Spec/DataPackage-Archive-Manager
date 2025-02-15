@@ -1041,7 +1041,8 @@ namespace DataPackage_Archive_Manager
                         {
                             ReportError(string.Format(
                                 "Data Package {0} has an existing metadata file over 6.5 days old; deleting file: {1}",
-                                dataPkgInfo.ID, metadataFile.FullName), true);
+                                dataPkgInfo.ID, metadataFile.FullName), logToDB: true);
+
                             metadataFile.Delete();
                         }
                         else
@@ -1050,7 +1051,7 @@ namespace DataPackage_Archive_Manager
                             // Log an error to the database
                             ReportError(string.Format(
                                 "Data Package {0} has an existing metadata file between 2 and 6.5 days old: {1}",
-                                dataPkgInfo.ID, metadataFile.FullName), true);
+                                dataPkgInfo.ID, metadataFile.FullName), logToDB: true);
 
                             // This is not a fatal error; return true
                             return true;
@@ -1687,7 +1688,7 @@ namespace DataPackage_Archive_Manager
                         string.Format(
                             "Data package {0} is not available in MyEMSL after 24 hours (% complete is < 100, current task is {1}). " +
                             "To ignore this upload, set ErrorCode to 101 in table DMS_Data_Package table T_MyEMSL_Uploads\r\n; see {2}",
-                            statusInfo.Value.DataPackageID, serverResponse.CurrentTask, statusInfo.Value.StatusURI), true);
+                            statusInfo.Value.DataPackageID, serverResponse.CurrentTask, statusInfo.Value.StatusURI), logToDB: true);
                     }
 
                     // Even though it is not yet available, we report Success
