@@ -976,11 +976,19 @@ namespace DataPackage_Archive_Manager
             }
 
             if (dataPkgInfo.Count == 1)
-                ReportError("Failed to archive Data Package " + dataPkgIDs.First());
+            {
+                ReportError(string.Format("Failed to archive Data Package {0}", dataPkgIDs.First()));
+            }
             else if (successCount == 0)
-                ReportError("Failed to archive any of the " + dataPkgIDs.Count + " candidate data packages", true);
+            {
+                ReportError(string.Format("Failed to archive any of the {0} candidate data packages", dataPkgIDs.Count), logToDB: true);
+            }
             else
-                ReportError("Failed to archive " + (dataPkgInfo.Count - successCount) + " data package(s); successfully archived " + successCount + " data package(s)", true);
+            {
+                ReportError(
+                    string.Format("Failed to archive {0} data package(s); successfully archived {1} data package(s)",
+                        dataPkgInfo.Count - successCount, successCount), logToDB: true);
+            }
 
             return false;
         }
@@ -1199,7 +1207,7 @@ namespace DataPackage_Archive_Manager
                     }
                     else
                     {
-                        ReportError("Upload of changed files for Data Package " + dataPkgInfo.ID + " failed: " + mMyEMSLUploader.ErrorMessage, true);
+                        ReportError(string.Format("Upload of changed files for Data Package {0} failed: {1}", dataPkgInfo.ID, mMyEMSLUploader.ErrorMessage), logToDB: true);
 
                         uploadInfo.ErrorCode = mMyEMSLUploader.ErrorMessage.GetHashCode();
                         if (uploadInfo.ErrorCode == 0)
@@ -1215,7 +1223,7 @@ namespace DataPackage_Archive_Manager
             }
             catch (Exception ex)
             {
-                ReportError("Error in ProcessOneDataPackage processing Data Package " + dataPkgInfo.ID + ": " + ex.Message, true, ex);
+                ReportError(string.Format("Error in ProcessOneDataPackage processing Data Package {0}: {1}", dataPkgInfo.ID, ex.Message), true, ex);
 
                 // Include the stack trace in the log
                 LogTools.WriteLog(LogTools.LoggerTypes.LogFile, BaseLogger.LogLevels.ERROR, "Detail for error in ProcessOneDataPackage for Data Package " + dataPkgInfo.ID, ex);
@@ -1449,8 +1457,10 @@ namespace DataPackage_Archive_Manager
 
                 if (archiveFiles.Count == 0)
                 {
-                    ReportError("MyEMSL did not return any files for the known data packages (" + dataPackageIDs.First().Key + "-" + dataPackageIDs.Last().Key + "); " +
-                                "the Metadata service is likely disabled or broken at present.", true);
+                    ReportError(
+                        string.Format("MyEMSL did not return any files for the known data packages ({0}-{1}); the Metadata service is likely disabled or broken at present.",
+                        dataPackageIDs.First().Key, dataPackageIDs.Last().Key), logToDB: true);
+
                     return false;
                 }
 
@@ -1628,13 +1638,13 @@ namespace DataPackage_Archive_Manager
 
                 if (lookupError)
                 {
-                    ReportError("Error looking up archive status for " + dataPackageAndEntryId + "; " + errorMessage, true);
+                    ReportError(string.Format("Error looking up archive status for {0}; {1}", dataPackageAndEntryId, errorMessage), true);
                     return UploadStatus.VerificationError;
                 }
 
                 if (!serverResponse.Valid)
                 {
-                    ReportError("Empty JSON server response for " + dataPackageAndEntryId + ", or bad data; see " + statusInfo.Value.StatusURI);
+                    ReportError(string.Format("Empty JSON server response for {0}, or bad data; see {1}", dataPackageAndEntryId, statusInfo.Value.StatusURI));
                     return UploadStatus.VerificationError;
                 }
 
