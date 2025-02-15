@@ -470,7 +470,7 @@ namespace DataPackage_Archive_Manager
                     "Data Package {0} has {1} files; " +
                     "the maximum number of files allowed in MyEMSL per data package is {2}; " +
                     "zip groups of files to reduce the total file count; see {3}",
-                    dataPkgInfo.ID, dataPackageFiles.Count, MAX_FILES_TO_ARCHIVE, dataPkgInfo.SharePath));
+                    dataPkgInfo.ID, dataPackageFiles.Count, MAX_FILES_TO_ARCHIVE, dataPkgInfo.SharePath), logToDB: true);
 
                 return new List<FileInfoObject>();
             }
@@ -1681,8 +1681,8 @@ namespace DataPackage_Archive_Manager
                             "(or the user has two EUS IDs and MyEMSL only recognizes the first one; see https://dms2.pnl.gov/user/report). " +
                             "Have user {0} login to {1} then wait 24 hours, " +
                             "then update table DMS_Data_Package.T_MyEMSL_Uploads to change the ErrorCode to 101 for data package {2}. " +
-                            "You must also delete file MyEMSL_metadata_CaptureJob_{2}.txt from a subdirectory below \\\\protoapps\\dataPkgs\\",
-                            statusInfo.Value.DataPackageOwner, DMSMetadataObject.EUS_PORTAL_URL, statusInfo.Value.DataPackageID));
+                            @"You must also delete file MyEMSL_metadata_CaptureJob_{2}.txt from a subdirectory below \\protoapps\dataPkgs\",
+                            statusInfo.Value.DataPackageOwner, DMSMetadataObject.EUS_PORTAL_URL, statusInfo.Value.DataPackageID), logToDB: true);
                     }
 
                     return UploadStatus.VerificationError;
