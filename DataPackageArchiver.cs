@@ -1100,7 +1100,7 @@ namespace DataPackage_Archive_Manager
                 {
                     // Data package not in MyEMSL (or the files reported by it were filtered out by the reader)
                     // See if DMS is tracking that this data package was, in fact, uploaded to DMS at some point in time
-                    // This is tracked by table T_MyEMSL_Uploads, examining rows where ErrorCode is 0 and FileCountNew or FileCountUpdated are positive
+                    // This is tracked by table dpkg.T_MyEMSL_Uploads, examining rows where Error_Code is 0 and File_Count_New or File_Count_Updated are positive
 
                     if (dataPkgInfo.MyEMSLUploads > 0)
                     {
@@ -1110,7 +1110,7 @@ namespace DataPackage_Archive_Manager
                             "Data package " + dataPkgInfo.ID +
                             " was previously uploaded to MyEMSL, yet the Metadata query did not return any files for this dataset." +
                             " Skipping this data package to prevent the addition of duplicate files to MyEMSL." +
-                            " To allow this upload, change ErrorCode to 101 in dpkg.T_MyEMSL_Uploads"
+                            " To allow this upload, change Error_Code to 101 in dpkg.T_MyEMSL_Uploads"
                             ,
                             BaseLogger.LogLevels.ERROR, logToDB);
 
@@ -1680,7 +1680,7 @@ namespace DataPackage_Archive_Manager
                             "Data package owner is not recognized by the MyEMSL system " +
                             "(or the user has two EUS IDs and MyEMSL only recognizes the first one; see https://dms2.pnl.gov/user/report). " +
                             "Have user {0} login to {1} then wait 24 hours, " +
-                            "then update table DMS_Data_Package.T_MyEMSL_Uploads to change the ErrorCode to 101 for data package {2}. " +
+                            "then update table dpkg.T_MyEMSL_Uploads to change the Error_Code to 101 for data package {2}. " +
                             @"You must also delete file MyEMSL_metadata_CaptureJob_{2}.txt from a subdirectory below \\protoapps\dataPkgs\",
                             statusInfo.Value.DataPackageOwner, DMSMetadataObject.EUS_PORTAL_URL, statusInfo.Value.DataPackageID), logToDB: true);
                     }
@@ -1695,7 +1695,7 @@ namespace DataPackage_Archive_Manager
                         ReportError(
                         string.Format(
                             "Data package {0} is not available in MyEMSL after 24 hours (% complete is < 100, current task is {1}). " +
-                            "To ignore this upload, set ErrorCode to 101 in table DMS_Data_Package table T_MyEMSL_Uploads\r\n; see {2}",
+                            "To ignore this upload, set Error_Code to 101 in table dpkg.T_MyEMSL_Uploads\r\n; see {2}",
                             statusInfo.Value.DataPackageID, serverResponse.CurrentTask, statusInfo.Value.StatusURI), logToDB: true);
                     }
 
