@@ -13,7 +13,8 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <NoWarn>IDE0028</NoWarn>
+    <NoWarn>IDE0028; SYSLIB1045</NoWarn>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MyEMSL-Pacifica" Version="2.1.118" />
