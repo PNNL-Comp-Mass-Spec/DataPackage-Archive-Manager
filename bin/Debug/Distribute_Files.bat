@@ -1,6 +1,6 @@
 @echo off
 
-set TargetBase=\\pnl\projects\OmicsSW\DMS_Programs\AnalysisToolManagerDistribution\DataPackage_Archive_Manager
+set TargetBase=\\Proto-3\DMS_Programs_Dist\AnalysisToolManagerDistribution\DataPackage_Archive_Manager
 set Iteration=1
 
 :Loop
